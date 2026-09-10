@@ -43,8 +43,11 @@ class PhaseLook:
 
 ## Lanterns 아래의 모든 OmniLight3D를 자동으로 모은다.
 ## 등불을 씬에 추가할 때마다 코드를 고치지 않아도 되도록 경로를 하드코딩하지 않는다.
-@onready var lantern_lights: Array[Node] = $Lanterns.find_children("*", "OmniLight3D", true, false)
+@onready var lantern_lights: Array[Node] = $Lanterns.find_children("*", "Light3D", true, false)
 @onready var lantern_sprites: Array[Node] = $Lanterns.find_children("*", "Sprite3D", true, false)
+
+## 씬에 들어서자마자 밤으로 시작한다. 밤 연출이 주인공인 씬에서 쓴다.
+@export var start_at_night: bool = false
 
 var _day: PhaseLook
 var _night: PhaseLook
@@ -68,6 +71,8 @@ func _ready() -> void:
 	)
 
 	DayNight.phase_changed.connect(_on_phase_changed)
+	if start_at_night:
+		DayNight.set_night(true)
 	# 씬 진입 시점의 상태를 보간 없이 즉시 반영한다.
 	_apply_phase(DayNight.is_night, false)
 
@@ -98,7 +103,7 @@ func _apply_phase(is_night: bool, animated: bool) -> void:
 		env.fog_light_color = look.fog_color
 		env.fog_density = look.fog_density
 		for light in lantern_lights:
-			(light as OmniLight3D).light_energy = look.lantern_energy
+			(light as Light3D).light_energy = look.lantern_energy
 		for sprite in lantern_sprites:
 			(sprite as Sprite3D).modulate = look.lantern_tint
 		return
@@ -106,6 +111,9 @@ func _apply_phase(is_night: bool, animated: bool) -> void:
 	# 이전 전환이 진행 중이면 중단한다. 겹치면 값이 튄다.
 	if _tween != null and _tween.is_valid():
 		_tween.kill()
+
+	# 그림자는 보간할 수 없으므로 전환 시작 시점에 바로 끊는다
+	sun.shadow_enabled = not is_night
 
 	var sec := DayNight.TRANSITION_SEC
 	_tween = create_tween().set_parallel()

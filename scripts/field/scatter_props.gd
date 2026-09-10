@@ -27,6 +27,16 @@ extends Node3D
 @export var area_size: Vector2 = Vector2(24, 15)
 @export var area_center: Vector2 = Vector2(0, -1)
 
+@export_group("군중")
+## 광장에 세울 행인들. 텍스처 몇 종을 돌려 쓰면 같은 얼굴이 늘어선 느낌을 피할 수 있다.
+@export var npc_textures: Array[Texture2D] = []
+@export_range(0, 60) var npc_count: int = 0
+@export var npc_area_size: Vector2 = Vector2(24, 10)
+@export var npc_area_center: Vector2 = Vector2(0, -2)
+## 캐릭터 도트 밀도는 전 씬에서 통일한다
+@export var npc_pixel_size: float = 0.067
+
+@export_group("")
 @export var scatter_seed: int = 424242
 
 ## 스프라이트 크기를 조금씩 흔들어 도장 찍은 느낌을 없앤다.
@@ -49,8 +59,50 @@ func _ready() -> void:
 	rng.seed = scatter_seed
 
 	_spawn_forest(rng)
+	_spawn_crowd(rng)
 	_spawn_batch(rng, tuft_texture, tuft_count)
 	_spawn_batch(rng, flower_texture, flower_count)
+
+
+## 행인을 흩뿌린다.
+##
+## 등불 근처는 밝고 먼 곳은 실루엣으로 남는 것이 밤 광장의 인상을 만들므로
+## shaded를 반드시 켠다. 끄면 어둠 속 인물까지 또렷해져 깊이가 사라진다.
+func _spawn_crowd(rng: RandomNumberGenerator) -> void:
+	if npc_textures.is_empty() or npc_count <= 0:
+		return
+
+	var half_x := npc_area_size.x * 0.5
+	var half_z := npc_area_size.y * 0.5
+
+	# 무리 중심을 몇 개 잡고 그 주위에 세운다.
+	# 균일 난수로 뿌리면 사람들이 일정 간격으로 늘어서 격자처럼 보인다 —
+	# 실제 광장에서는 삼삼오오 모여 서고, 그 덩어리 사이가 비어 있다.
+	var cluster_count := maxi(2, int(round(npc_count / 3.5)))
+	var clusters: Array[Vector2] = []
+	for i in cluster_count:
+		clusters.append(Vector2(
+			npc_area_center.x + rng.randf_range(-half_x, half_x),
+			npc_area_center.y + rng.randf_range(-half_z, half_z)
+		))
+
+	for i in npc_count:
+		var tex: Texture2D = npc_textures[rng.randi() % npc_textures.size()]
+		var sprite := Sprite3D.new()
+		sprite.texture = tex
+		sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		sprite.shaded = true
+		sprite.pixel_size = npc_pixel_size
+
+		var c: Vector2 = clusters[rng.randi() % clusters.size()]
+		var spot := c + Vector2(rng.randf_range(-1.9, 1.9), rng.randf_range(-1.1, 1.1))
+		spot.x = clampf(spot.x, npc_area_center.x - half_x, npc_area_center.x + half_x)
+		spot.y = clampf(spot.y, npc_area_center.y - half_z, npc_area_center.y + half_z)
+
+		sprite.position = Vector3(spot.x, tex.get_height() * npc_pixel_size * 0.5, spot.y)
+		add_child(sprite)
 
 
 ## 배경 숲을 띠 모양으로 뿌린다.
