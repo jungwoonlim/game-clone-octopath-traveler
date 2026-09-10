@@ -1,0 +1,35 @@
+; Godot 프로젝트 설정
+; 에디터로 열지 않고 CLI로 개발하므로 이 파일을 직접 편집한다.
+
+config_version=5
+
+[application]
+
+config/name="Octopath Clone"
+config/description="Godot 4.7 HD-2D JRPG 프로토타입"
+run/main_scene="res://scenes/main/Main.tscn"
+config/features=PackedStringArray("4.7", "Forward Plus")
+
+[autoload]
+
+GameState="*res://scripts/core/game_state.gd"
+SceneRouter="*res://scripts/core/scene_router.gd"
+DayNight="*res://scripts/core/day_night.gd"
+
+[display]
+
+; 도트풍의 핵심은 낮은 내부 해상도다.
+; 640x360으로 렌더한 뒤 1280x720 창에 2배로 확대하면 픽셀이 굵게 보인다.
+; 1280으로 그대로 렌더하면 아무리 조명을 잘 잡아도 매끈한 3D처럼 보인다.
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="viewport"
+window/stretch/aspect="keep"
+
+[rendering]
+
+renderer/rendering_method="forward_plus"
+; 픽셀아트가 뭉개지지 않도록 기본 텍스처 필터를 Nearest로 둔다.
+textures/canvas_textures/default_texture_filter=0

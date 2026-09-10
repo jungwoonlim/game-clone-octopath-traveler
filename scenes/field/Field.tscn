@@ -1,0 +1,454 @@
+[gd_scene load_steps=31 format=3]
+
+[ext_resource type="Script" path="res://scripts/field/field.gd" id="1_field"]
+[ext_resource type="Script" path="res://scripts/field/scatter_props.gd" id="2_scatter"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/grass.png" id="3_grass"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/dirt.png" id="4_dirt"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/stone_wall.png" id="5_stone"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/wood_wall.png" id="6_wood"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/roof.png" id="7_roof"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/cliff.png" id="8_cliff"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/water.png" id="9_water"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/tree.png" id="10_tree"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/bush.png" id="11_bush"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/fence.png" id="12_fence"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/rock.png" id="13_rock"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/grass_tuft.png" id="14_tuft"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/flowers.png" id="15_flower"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/lantern.png" id="16_lantern"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/crate.png" id="17_crate"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/signpost.png" id="18_sign"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_player.png" id="19_player"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_a.png" id="20_npc_a"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_b.png" id="21_npc_b"]
+
+[sub_resource type="Environment" id="Environment_field"]
+background_mode = 1
+background_color = Color(0.62, 0.73, 0.85, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.5, 0.55, 0.6, 1)
+ambient_light_energy = 0.6
+tonemap_mode = 2
+fog_enabled = true
+fog_light_color = Color(0.68, 0.76, 0.86, 1)
+fog_light_energy = 1.0
+fog_density = 0.010
+fog_aerial_perspective = 0.35
+fog_sky_affect = 0.0
+glow_enabled = true
+glow_intensity = 0.85
+glow_bloom = 0.2
+glow_hdr_threshold = 0.9
+adjustment_enabled = true
+adjustment_saturation = 1.25
+adjustment_contrast = 1.15
+
+[sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_field"]
+dof_blur_far_enabled = true
+dof_blur_far_distance = 26.0
+dof_blur_far_transition = 5.0
+dof_blur_near_enabled = true
+dof_blur_near_distance = 17.0
+dof_blur_near_transition = 3.0
+dof_blur_amount = 0.08
+
+[sub_resource type="StandardMaterial3D" id="Mat_ground"]
+albedo_texture = ExtResource("3_grass")
+texture_filter = 0
+uv1_scale = Vector3(19, 19, 19)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_dirt"]
+albedo_texture = ExtResource("4_dirt")
+texture_filter = 0
+uv1_scale = Vector3(7, 7, 7)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_stone"]
+albedo_texture = ExtResource("5_stone")
+texture_filter = 0
+uv1_scale = Vector3(2, 1.2, 2)
+roughness = 0.95
+
+[sub_resource type="StandardMaterial3D" id="Mat_wood"]
+albedo_texture = ExtResource("6_wood")
+texture_filter = 0
+uv1_scale = Vector3(2, 1.2, 2)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_roof"]
+albedo_texture = ExtResource("7_roof")
+texture_filter = 0
+uv1_scale = Vector3(2.4, 1, 2)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_cliff"]
+albedo_texture = ExtResource("8_cliff")
+texture_filter = 0
+uv1_scale = Vector3(17, 2, 2)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_water"]
+albedo_texture = ExtResource("9_water")
+texture_filter = 0
+uv1_scale = Vector3(2, 1, 1.4)
+roughness = 0.25
+metallic = 0.2
+
+[node name="Field" type="Node3D"]
+script = ExtResource("1_field")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_field")
+
+[node name="FieldCamera" type="Camera3D" parent="."]
+attributes = SubResource("CameraAttributesPractical_field")
+position = Vector3(0, 16, 14)
+rotation_degrees = Vector3(-45, 0, 0)
+fov = 30.0
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-55, -35, 0)
+light_color = Color(1, 0.96, 0.88, 1)
+light_energy = 1.2
+shadow_enabled = true
+
+[node name="Terrain" type="Node3D" parent="."]
+
+[node name="Ground" type="CSGBox3D" parent="Terrain"]
+size = Vector3(40, 0.5, 40)
+position = Vector3(0, -0.25, 0)
+material = SubResource("Mat_ground")
+
+[node name="PathMain" type="CSGBox3D" parent="Terrain"]
+size = Vector3(18, 0.08, 2.8)
+position = Vector3(0, 0.01, 1.6)
+material = SubResource("Mat_dirt")
+
+[node name="PathBranch" type="CSGBox3D" parent="Terrain"]
+size = Vector3(2.4, 0.08, 6)
+position = Vector3(-0.6, 0.01, -1.4)
+material = SubResource("Mat_dirt")
+
+[node name="Pond" type="CSGBox3D" parent="Terrain"]
+size = Vector3(4.2, 0.1, 2.8)
+position = Vector3(6.4, 0.015, 3.4)
+material = SubResource("Mat_water")
+
+[node name="Cliff" type="CSGBox3D" parent="Terrain"]
+size = Vector3(38, 4.5, 2.5)
+position = Vector3(0, 2.25, -11.5)
+material = SubResource("Mat_cliff")
+
+[node name="DirtPatchA" type="CSGBox3D" parent="Terrain"]
+size = Vector3(3.4, 0.07, 2.2)
+position = Vector3(-8.2, 0.008, 3.6)
+material = SubResource("Mat_dirt")
+
+[node name="DirtPatchB" type="CSGBox3D" parent="Terrain"]
+size = Vector3(2.6, 0.07, 1.8)
+position = Vector3(7.4, 0.008, -1.6)
+material = SubResource("Mat_dirt")
+
+[node name="Buildings" type="Node3D" parent="."]
+
+[node name="InnWall" type="CSGBox3D" parent="Buildings"]
+size = Vector3(4.6, 2.6, 3.6)
+position = Vector3(-5, 1.3, -4.6)
+material = SubResource("Mat_wood")
+
+[node name="InnRoof" type="CSGBox3D" parent="Buildings"]
+size = Vector3(5.4, 0.55, 4.4)
+position = Vector3(-5, 2.85, -4.6)
+material = SubResource("Mat_roof")
+
+[node name="ShopWall" type="CSGBox3D" parent="Buildings"]
+size = Vector3(3.6, 2.2, 3)
+position = Vector3(5.6, 1.1, -4.2)
+material = SubResource("Mat_stone")
+
+[node name="ShopRoof" type="CSGBox3D" parent="Buildings"]
+size = Vector3(4.3, 0.5, 3.7)
+position = Vector3(5.6, 2.4, -4.2)
+material = SubResource("Mat_roof")
+
+[node name="Trees" type="Node3D" parent="."]
+
+[node name="T1" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-8.5, 1.61, -6.5)
+
+[node name="T2" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-6.4, 1.61, -7.6)
+
+[node name="T3" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(8.2, 1.61, -7)
+
+[node name="T4" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(10, 1.61, -5)
+
+[node name="T5" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-10, 1.61, -2.5)
+
+[node name="T6" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(1.6, 1.61, -7.4)
+
+[node name="T7" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.078
+position = Vector3(-9.8, 1.87, 3.8)
+
+[node name="T8" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.072
+position = Vector3(10.2, 1.73, 2.2)
+
+[node name="Props" type="Node3D" parent="."]
+
+[node name="BushD" type="Sprite3D" parent="Props"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-5.4, 0.67, 5)
+
+[node name="BushE" type="Sprite3D" parent="Props"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-9, 0.67, 1.4)
+
+[node name="RockC" type="Sprite3D" parent="Props"]
+texture = ExtResource("13_rock")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(1.4, 0.54, 5.4)
+
+[node name="RockD" type="Sprite3D" parent="Props"]
+texture = ExtResource("13_rock")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-2.8, 0.54, 4.2)
+
+[node name="BushA" type="Sprite3D" parent="Props"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-3.2, 0.67, -1.4)
+
+[node name="BushB" type="Sprite3D" parent="Props"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(3.8, 0.67, -1.8)
+
+[node name="BushC" type="Sprite3D" parent="Props"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-7.6, 0.67, 0.6)
+
+[node name="RockA" type="Sprite3D" parent="Props"]
+texture = ExtResource("13_rock")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-6.8, 0.54, 2.4)
+
+[node name="RockB" type="Sprite3D" parent="Props"]
+texture = ExtResource("13_rock")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(8.6, 0.54, -0.8)
+
+[node name="CrateA" type="Sprite3D" parent="Props"]
+texture = ExtResource("17_crate")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-2.4, 0.54, -3)
+
+[node name="CrateB" type="Sprite3D" parent="Props"]
+texture = ExtResource("17_crate")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-1.5, 0.54, -3.3)
+
+[node name="Signpost" type="Sprite3D" parent="Props"]
+texture = ExtResource("18_sign")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(2.2, 0.67, 0.9)
+
+[node name="FenceA" type="Sprite3D" parent="Props"]
+texture = ExtResource("12_fence")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(4.4, 0.67, 4.8)
+
+[node name="FenceB" type="Sprite3D" parent="Props"]
+texture = ExtResource("12_fence")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(6, 0.67, 4.9)
+
+[node name="FenceC" type="Sprite3D" parent="Props"]
+texture = ExtResource("12_fence")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(7.6, 0.67, 4.8)
+
+[node name="Lanterns" type="Node3D" parent="."]
+
+[node name="LanternA" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-2.6, 0.74, 3.1)
+
+[node name="LightA" type="OmniLight3D" parent="Lanterns/LanternA"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 6.0
+
+[node name="LanternB" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(2.6, 0.74, 3.1)
+
+[node name="LightB" type="OmniLight3D" parent="Lanterns/LanternB"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 6.0
+
+[node name="Scatter" type="Node3D" parent="."]
+script = ExtResource("2_scatter")
+tuft_texture = ExtResource("14_tuft")
+flower_texture = ExtResource("15_flower")
+tuft_count = 140
+flower_count = 40
+area_size = Vector2(28, 20)
+area_center = Vector2(0, -2)
+
+[node name="Actors" type="Node3D" parent="."]
+
+[node name="Player" type="Sprite3D" parent="Actors"]
+texture = ExtResource("19_player")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(0, 0.8, 0.6)
+
+[node name="NpcA" type="Sprite3D" parent="Actors"]
+texture = ExtResource("20_npc_a")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(-2.6, 0.8, -0.6)
+
+[node name="NpcB" type="Sprite3D" parent="Actors"]
+texture = ExtResource("21_npc_b")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(3, 0.8, 0.2)
