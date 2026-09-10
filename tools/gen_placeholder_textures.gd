@@ -40,6 +40,26 @@ func _init() -> void:
 	_save(_make_crate(), "crate.png")
 	_save(_make_signpost(), "signpost.png")
 
+	# 샘플② 도시 밤 광장용
+	_save(_make_cobblestone(), "cobblestone.png")
+	_save(_make_stone_block(), "stone_block.png")
+	_save(_make_plaza_medallion(), "medallion.png")
+	_save(_make_window(true), "window_lit.png")
+	_save(_make_window(false), "window_dark.png")
+	_save(_make_roof_slate(), "roof_slate.png")
+	_save(_make_iron_fence(), "iron_fence.png")
+	_save(_make_street_lamp(), "street_lamp.png")
+	_save(_make_cypress(), "cypress.png")
+	_save(_make_statue(), "statue.png")
+
+	# 건물 파사드 — 창문을 개별 노드로 두면 수십 개가 되므로 텍스처에 그려 넣는다.
+	# 같은 좌표계로 발광 마스크를 함께 만들어 창문만 빛나게 한다.
+	_save(_make_light_glow(), "light_glow.png")
+
+	var facade := _make_facade()
+	_save(facade[0], "facade.png")
+	_save(facade[1], "facade_emission.png")
+
 	print("TEXGEN OK")
 	quit(0)
 
@@ -368,6 +388,364 @@ func _make_signpost() -> Image:
 	for x in range(4, 10):
 		img.set_pixel(x, 6, Color8(108, 82, 52))
 	return img
+
+
+# ── 도시 밤 광장 (샘플②) ─────────────────────────────────────
+
+## 광장 돌바닥. 벽돌처럼 규칙적이면 인공적으로 보이므로 둥근 돌을 흔들어 배치한다.
+func _make_cobblestone() -> Image:
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color8(52, 50, 48))
+	var stone := [
+		Color8(124, 120, 114), Color8(138, 133, 125),
+		Color8(110, 106, 100), Color8(130, 124, 116),
+	]
+	for cy in 4:
+		for cx in 4:
+			var ox := cx * 8 + 4 + (randi() % 3 - 1)
+			var oy := cy * 8 + 4 + (randi() % 3 - 1)
+			var rx := 3.2 + randf() * 0.7
+			var ry := 3.2 + randf() * 0.7
+			var c: Color = _pick(stone)
+			for y in 32:
+				for x in 32:
+					var dx := (x - ox) / rx
+					var dy := (y - oy) / ry
+					if dx * dx + dy * dy < 1.0:
+						img.set_pixel(x, y, c)
+			# 돌 윗면에 하이라이트를 한 줄 넣어 젖은 듯한 느낌을 준다
+			if oy - 2 >= 0 and oy - 2 < 32:
+				for x in range(maxi(ox - 2, 0), mini(ox + 2, 32)):
+					if img.get_pixel(x, oy - 2) == c:
+						img.set_pixel(x, oy - 2, c.lightened(0.18))
+	return img
+
+
+## 석조 건물 벽. stone_wall보다 블록이 크고 밝아 도시 건축물에 어울린다.
+func _make_stone_block() -> Image:
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	var stone := [Color8(168, 160, 146), Color8(180, 172, 156), Color8(154, 147, 134)]
+	var seam := Color8(104, 98, 90)
+	for y in 32:
+		for x in 32:
+			img.set_pixel(x, y, _pick(stone))
+	# 가로 줄눈 (16px 간격의 큰 블록)
+	for y in [0, 1, 16, 17]:
+		for x in 32:
+			img.set_pixel(x, y, seam)
+	# 세로 줄눈을 단마다 엇갈리게
+	for row in 2:
+		var y_start := row * 16
+		var offset := 0 if row % 2 == 0 else 16
+		for y in range(y_start, y_start + 16):
+			var x := offset
+			while x < 32:
+				img.set_pixel(x, y, seam)
+				if x + 1 < 32:
+					img.set_pixel(x + 1, y, seam)
+				x += 32
+	return img
+
+
+## 광장 중앙의 원형 모자이크. 샘플②에서 바닥의 초점 역할을 한다.
+func _make_plaza_medallion() -> Image:
+	var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var light := Color8(188, 178, 160)
+	var dark := Color8(138, 130, 118)
+	var mid := Color8(164, 155, 140)
+
+	for y in 64:
+		for x in 64:
+			var dx := x - 31.5
+			var dy := y - 31.5
+			var d := sqrt(dx * dx + dy * dy)
+			if d > 31.0:
+				continue
+			# 동심원 띠
+			var band := int(d / 4.0)
+			var c := light if band % 2 == 0 else mid
+			# 방사형 살 — 각도를 8등분해 밝고 어두운 쐐기를 번갈아 넣는다
+			var ang := atan2(dy, dx) + PI
+			var spoke := int(ang / (PI / 8.0))
+			if spoke % 2 == 0 and d > 10.0 and d < 26.0:
+				c = dark
+			if d > 28.0:
+				c = dark
+			img.set_pixel(x, y, c)
+	return img
+
+
+## 아치형 창문. lit이면 안쪽이 등불색으로 빛난다.
+func _make_window(lit: bool) -> Image:
+	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var frame := Color8(96, 88, 78)
+	var glass_lit := [Color8(252, 214, 138), Color8(255, 232, 176), Color8(242, 196, 118)]
+	var glass_dark := [Color8(38, 44, 66), Color8(46, 52, 76)]
+
+	for y in 24:
+		for x in 16:
+			# 위쪽은 아치, 아래쪽은 사각
+			var inside: bool
+			if y < 8:
+				var dx := (x - 7.5) / 6.0
+				var dy := (y - 8.0) / 7.0
+				inside = dx * dx + dy * dy < 1.0
+			else:
+				inside = x >= 2 and x <= 13 and y <= 22
+			if not inside:
+				continue
+			var edge: bool = (x <= 2 or x >= 13 or y >= 21)
+			if edge:
+				img.set_pixel(x, y, frame)
+			else:
+				img.set_pixel(x, y, _pick(glass_lit) if lit else _pick(glass_dark))
+
+	# 창살
+	for y in range(4, 22):
+		if img.get_pixel(7, y).a > 0.0:
+			img.set_pixel(7, y, frame)
+	for x in range(2, 14):
+		if img.get_pixel(x, 13).a > 0.0:
+			img.set_pixel(x, 13, frame)
+	return img
+
+
+## 슬레이트 지붕. roof(붉은 기와)보다 어둡고 차가워 석조 건물에 어울린다.
+func _make_roof_slate() -> Image:
+	var img := Image.create(32, 32, false, Image.FORMAT_RGBA8)
+	var slate := [Color8(72, 78, 92), Color8(84, 90, 106), Color8(62, 68, 80)]
+	for y in 32:
+		for x in 32:
+			img.set_pixel(x, y, _pick(slate))
+	for row in 8:
+		var y := row * 4
+		for x in 32:
+			img.set_pixel(x, y, Color8(48, 52, 62))
+		var offset := 0 if row % 2 == 0 else 4
+		var x2 := offset
+		while x2 < 32:
+			for yy in range(y, mini(y + 4, 32)):
+				img.set_pixel(x2, yy, Color8(56, 61, 72))
+			x2 += 8
+	return img
+
+
+## 철제 난간. 광장 경계를 두르고 전경 프레이밍에도 쓴다.
+func _make_iron_fence() -> Image:
+	var img := Image.create(24, 32, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var iron := Color8(42, 44, 52)
+	var iron_hi := Color8(66, 70, 82)
+
+	# 세로 창살 5개, 끝을 뾰족하게
+	for i in 5:
+		var x := 2 + i * 5
+		for y in range(4, 32):
+			img.set_pixel(x, y, iron)
+			if x + 1 < 24:
+				img.set_pixel(x + 1, y, iron_hi if y % 7 == 0 else iron)
+		# 창끝 장식
+		img.set_pixel(x, 2, iron)
+		if x + 1 < 24:
+			img.set_pixel(x + 1, 3, iron)
+		if x - 1 >= 0:
+			img.set_pixel(x - 1, 3, iron)
+
+	# 가로 띠 2줄
+	for y in [8, 9, 22, 23]:
+		for x in 24:
+			img.set_pixel(x, y, iron if y % 2 == 0 else iron_hi)
+	return img
+
+
+## 장식 가로등. 기존 lantern(12x22)은 확대하면 도트 밀도가 어긋나 도시용으로 새로 만든다.
+func _make_street_lamp() -> Image:
+	var img := Image.create(20, 40, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var iron := Color8(48, 46, 52)
+	var iron_hi := Color8(74, 72, 80)
+	var flame := Color8(255, 236, 176)
+	var glow := Color8(252, 206, 120)
+
+	# 기둥
+	for y in range(14, 40):
+		img.set_pixel(9, y, iron)
+		img.set_pixel(10, y, iron_hi)
+	# 받침
+	for y in range(37, 40):
+		for x in range(6, 14):
+			img.set_pixel(x, y, iron)
+	# 기둥 중간 장식 링
+	for x in range(7, 13):
+		img.set_pixel(x, 22, iron_hi)
+
+	# 등갓 (위쪽 사각뿔)
+	for y in range(2, 6):
+		var w := y - 1
+		for x in range(10 - w, 10 + w):
+			img.set_pixel(x, y, iron)
+	# 유리함 — 안쪽이 가장 밝아야 광원처럼 읽힌다
+	for y in range(6, 14):
+		for x in range(5, 15):
+			var edge: bool = x == 5 or x == 14 or y == 13
+			img.set_pixel(x, y, iron if edge else glow)
+	for y in range(8, 12):
+		for x in range(7, 13):
+			img.set_pixel(x, y, flame)
+	return img
+
+
+## 침엽수. 샘플②에서 어두운 실루엣으로 광장 가장자리에 서 있다.
+func _make_cypress() -> Image:
+	var img := Image.create(24, 56, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var needle := [Color8(34, 56, 42), Color8(44, 70, 50), Color8(26, 44, 34)]
+	var trunk := Color8(58, 44, 34)
+
+	for y in range(50, 56):
+		for x in range(10, 14):
+			img.set_pixel(x, y, trunk)
+
+	# 아래로 갈수록 넓어지는 원뿔. 윤곽을 흔들어 잎처럼 보이게 한다.
+	for y in range(0, 52):
+		var t := float(y) / 52.0
+		var half := 1.5 + t * 9.0
+		var jitter := randf() * 1.6
+		for x in 24:
+			if absf(x - 11.5) < half - jitter:
+				img.set_pixel(x, y, _pick(needle))
+	return img
+
+
+## 석상. 건물 위나 기둥 위에 올려 도시의 격을 만든다.
+func _make_statue() -> Image:
+	var img := Image.create(20, 40, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var stone := [Color8(172, 166, 154), Color8(186, 180, 168), Color8(156, 150, 140)]
+	var shade := Color8(128, 122, 114)
+
+	# 받침
+	for y in range(32, 40):
+		for x in range(3, 17):
+			img.set_pixel(x, y, _pick(stone) if y < 38 else shade)
+	# 몸통 — 아래로 살짝만 퍼지게 한다. 많이 퍼뜨리면 원뿔로 보인다.
+	for y in range(15, 32):
+		var t := float(y - 15) / 17.0
+		var half := 3.0 + t * 2.2
+		for x in 20:
+			if absf(x - 9.5) < half:
+				img.set_pixel(x, y, _pick(stone))
+	# 어깨 — 사람 실루엣의 핵심 단서
+	for y in range(13, 16):
+		for x in range(5, 15):
+			img.set_pixel(x, y, _pick(stone))
+	# 머리
+	for y in range(5, 13):
+		for x in range(7, 13):
+			img.set_pixel(x, y, _pick(stone))
+	# 목
+	for y in range(12, 14):
+		for x in range(8, 12):
+			img.set_pixel(x, y, shade)
+	# 한쪽 팔을 들어 올린 자세
+	for y in range(8, 16):
+		img.set_pixel(14, y, _pick(stone))
+		img.set_pixel(15, y, shade)
+	for x in range(13, 16):
+		img.set_pixel(x, 7, _pick(stone))
+	return img
+
+
+## 광원 주위의 빛무리.
+##
+## 볼류메트릭 안개로도 같은 효과를 낼 수 있지만 프레임이 주기적으로 크게 튄다
+## (평균 85fps에 최저 16fps). 발광 스프라이트를 겹치는 쪽이 훨씬 싸고 안정적이다.
+## 중심에서 가장자리로 부드럽게 사라져야 원판처럼 보이지 않는다.
+func _make_light_glow() -> Image:
+	var size := 64
+	var img := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var c := (size - 1) * 0.5
+	for y in size:
+		for x in size:
+			var d := sqrt(pow(x - c, 2) + pow(y - c, 2)) / c
+			if d >= 1.0:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			# 제곱으로 떨어뜨려 중심만 진하게 남긴다
+			var a := pow(1.0 - d, 2.4)
+			img.set_pixel(x, y, Color(1.0, 0.86, 0.62, a))
+	return img
+
+
+## 창문이 박힌 석조 파사드와 그 발광 마스크를 함께 만든다.
+##
+## 두 장을 한 함수에서 만드는 이유: 창문 좌표가 조금이라도 어긋나면 벽이 빛나거나
+## 창문이 어두운 채로 남는다. 같은 루프에서 그려야 어긋날 수가 없다.
+## 반환: [albedo, emission]
+func _make_facade() -> Array:
+	var size := 64
+	var alb := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var emi := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	emi.fill(Color(0, 0, 0, 1))
+
+	var stone := [Color8(166, 158, 144), Color8(178, 170, 154), Color8(152, 145, 132)]
+	var seam := Color8(102, 96, 88)
+	var frame := Color8(88, 80, 72)
+	var glass := [Color8(252, 214, 138), Color8(255, 234, 178), Color8(240, 194, 116)]
+
+	for y in size:
+		for x in size:
+			alb.set_pixel(x, y, _pick(stone))
+
+	# 석재 줄눈
+	for y in range(0, size, 8):
+		for x in size:
+			alb.set_pixel(x, y, seam)
+
+	# 창문 2×2. 각 창은 아치형이며, 같은 픽셀을 발광 마스크에도 찍는다.
+	var win_w := 14
+	var win_h := 20
+	for row in 2:
+		for col in 2:
+			var ox := 8 + col * 32
+			var oy := 6 + row * 32
+			for wy in win_h:
+				for wx in win_w:
+					var px := ox + wx
+					var py := oy + wy
+					if px >= size or py >= size:
+						continue
+					# 위쪽 절반은 아치
+					var inside: bool
+					if wy < 7:
+						var dx := (wx - (win_w - 1) * 0.5) / (win_w * 0.5)
+						var dy := (wy - 7.0) / 7.0
+						inside = dx * dx + dy * dy < 1.0
+					else:
+						inside = true
+					if not inside:
+						continue
+
+					var edge: bool = wx <= 1 or wx >= win_w - 2 or wy >= win_h - 2
+					if edge:
+						alb.set_pixel(px, py, frame)
+					else:
+						var g: Color = _pick(glass)
+						alb.set_pixel(px, py, g)
+						# 발광 마스크에는 유리만 찍는다
+						emi.set_pixel(px, py, g)
+
+			# 창살
+			for wy in range(3, win_h - 2):
+				var px := ox + win_w / 2
+				var py := oy + wy
+				if px < size and py < size and alb.get_pixel(px, py) != Color8(0, 0, 0, 0):
+					alb.set_pixel(px, py, frame)
+					emi.set_pixel(px, py, Color(0, 0, 0, 1))
+
+	return [alb, emi]
 
 
 ## 간단한 인물 실루엣. 16x24는 SNES급 JRPG 캐릭터의 전형적인 크기다.
