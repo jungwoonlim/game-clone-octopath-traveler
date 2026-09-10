@@ -34,3 +34,7 @@ Godot 4.7로 만드는 옥토패스 트래블러 2 스타일 HD-2D JRPG 프로�
 | 2026-09-10 | 카메라 부감 -45° → -22° | scenes/field, skills/hd2d-visual | 원작 스크린샷 4건 대조 결과 -45°는 전략게임 시점이었음 |
 | 2026-09-10 | 배경 근접 배치·계단식 지형·전경 프레이밍·비네팅 추가 | scenes/field, shaders/vignette.gdshader | 낮은 각도에서 배경이 멀면 화면 상단에 눌려 배경 구실을 못 함 |
 | 2026-09-10 | 나무 스케일 기준 정립 (3m → 5~11m) | skills/hd2d-visual | 캐릭터 대비 나무가 작아 덤불로 보였음 |
+| 2026-09-10 | 도시 밤 광장 씬 신규 (샘플② 재현) | scenes/field/TownSquare.tscn | 사용자가 목표 장면으로 선택 |
+| 2026-09-10 | 성능 측정 도구 `bench` 추가 | tools/measure_fps.gd, skills/godot-run | 캡처 직후 FPS는 셰이더 컴파일 중이라 74fps를 13fps로 오독했음 |
+| 2026-09-10 | 볼류메트릭 안개 → 빛무리 스프라이트로 대체 | scenes/field/TownSquare.tscn | 볼류메트릭이 프레임 스파이크 유발 (평균 85fps, 최저 16fps) |
+| 2026-09-10 | 밤 도시 연출 항목 대폭 보강 | skills/hd2d-visual | 창문 발광 마스크, 빛무리, SSR, 알파 블렌딩 함정, 군중 클러스터링 |

@@ -220,11 +220,12 @@ cmd_shot() {
 
 cmd_bench() {
 	local night="${1:-false}"
-	echo "▶ 성능 측정 (밤: $night) — 워밍업 후 120프레임 평균"
+	local scene="${2:-res://scenes/main/Main.tscn}"
+	echo "▶ 성능 측정 (밤: $night, 씬: $scene) — 워밍업 후 120프레임 평균"
 	local log
 	log="$("$GODOT" --path "$PROJECT_ROOT" --resolution 1280x720 \
 		--script res://tools/measure_fps.gd \
-		-- "--night=$night" 2>&1 | strip_noise)"
+		-- "--night=$night" "--scene=$scene" 2>&1 | strip_noise)"
 
 	if printf '%s\n' "$log" | grep -q "BENCH avg"; then
 		printf '%s\n' "$log" | grep "BENCH avg" | sed 's/^/    /'
