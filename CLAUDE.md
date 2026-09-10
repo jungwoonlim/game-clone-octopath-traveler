@@ -31,3 +31,6 @@ Godot 4.7로 만드는 옥토패스 트래블러 2 스타일 HD-2D JRPG 프로�
 | 2026-09-10 | Sprite3D 4속성 → 5속성 (`shaded` 추가) | skills/hd2d-visual | 기본값 false라 스프라이트가 조명을 안 받아 밤에 캐릭터만 밝게 뜸 |
 | 2026-09-10 | 안개 + 등불 연출 섹션 추가 | skills/hd2d-visual | 안개와 DOF를 동시에 강하게 걸어 화면이 뿌예지는 실수를 겪음 |
 | 2026-09-10 | 스크린샷 `--night` 옵션 추가 | tools/capture_screenshot.gd, skills/godot-run | 밤 연출을 에이전트가 확인할 수단이 없었음 |
+| 2026-09-10 | 카메라 부감 -45° → -22° | scenes/field, skills/hd2d-visual | 원작 스크린샷 4건 대조 결과 -45°는 전략게임 시점이었음 |
+| 2026-09-10 | 배경 근접 배치·계단식 지형·전경 프레이밍·비네팅 추가 | scenes/field, shaders/vignette.gdshader | 낮은 각도에서 배경이 멀면 화면 상단에 눌려 배경 구실을 못 함 |
+| 2026-09-10 | 나무 스케일 기준 정립 (3m → 5~11m) | skills/hd2d-visual | 캐릭터 대비 나무가 작아 덤불로 보였음 |

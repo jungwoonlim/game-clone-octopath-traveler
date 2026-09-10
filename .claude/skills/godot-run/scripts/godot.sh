@@ -201,6 +201,14 @@ cmd_shot() {
 		-- "--scene=$scene" "--out=res://$out" "--night=$night" 2>&1 | strip_noise)"
 
 	if printf '%s\n' "$log" | grep -q "CAPTURE OK"; then
+		# 캡처가 성공해도 스크립트가 죽어 있으면 화면 일부가 통째로 비어 있다.
+		# 실제로 scatter 스크립트가 파싱 에러로 로드되지 않아 배경 숲이 없는 채
+		# 여러 번 "정상 캡처"로 넘어간 적이 있다. 반드시 함께 검사한다.
+		if printf '%s\n' "$log" | grep -qE "SCRIPT ERROR|Parse Error|Failed to load"; then
+			echo "✗ FAIL — shot (캡처는 됐으나 스크립트 에러 — 화면이 불완전하다)"
+			printf '%s\n' "$log" | grep -E "SCRIPT ERROR|Parse Error|Failed to load" | head -6 | sed 's/^/    /'
+			return 1
+		fi
 		echo "✓ PASS — shot"
 		printf '%s\n' "$log" | grep "CAPTURE OK" | sed 's/^/    /'
 		return 0

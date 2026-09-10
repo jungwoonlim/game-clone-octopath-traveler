@@ -11,6 +11,18 @@ extends Node3D
 @export_range(0, 300) var tuft_count: int = 90
 @export_range(0, 100) var flower_count: int = 26
 
+@export_group("배경 숲")
+## 화면 위쪽을 채우는 원경 숲. 카메라 각도가 낮을수록 배경이 화면을 많이 차지하므로,
+## 나무를 띠 모양으로 촘촘히 뿌려 지평선을 가린다. 안 그러면 배경색 벽이 드러난다.
+@export var tree_texture: Texture2D
+@export_range(0, 200) var tree_count: int = 0
+## 나무를 뿌릴 z 범위 (뒤쪽일수록 값이 작다)
+@export var tree_band_z: Vector2 = Vector2(-16, -7)
+## 나무를 뿌릴 x 폭 (중심 기준 ±절반)
+@export var tree_band_width: float = 34.0
+@export var tree_pixel_size_min: float = 0.062
+@export var tree_pixel_size_max: float = 0.098
+
 ## 뿌릴 영역 (가로 × 세로). 카메라에 잡히는 범위보다 조금 넓게 잡는다.
 @export var area_size: Vector2 = Vector2(24, 15)
 @export var area_center: Vector2 = Vector2(0, -1)
@@ -36,8 +48,41 @@ func _ready() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = scatter_seed
 
+	_spawn_forest(rng)
 	_spawn_batch(rng, tuft_texture, tuft_count)
 	_spawn_batch(rng, flower_texture, flower_count)
+
+
+## 배경 숲을 띠 모양으로 뿌린다.
+## 뒤쪽(z가 작을수록) 나무를 작게 만들어 원근을 강조한다 — 크기가 균일하면 벽처럼 보인다.
+func _spawn_forest(rng: RandomNumberGenerator) -> void:
+	if tree_texture == null or tree_count <= 0:
+		return
+
+	var half := tree_band_width * 0.5
+	for i in tree_count:
+		var z := rng.randf_range(tree_band_z.x, tree_band_z.y)
+		var x := rng.randf_range(-half, half)
+
+		# 띠 안에서 뒤쪽일수록 작게. 0=가장 뒤, 1=가장 앞
+		var depth_t := inverse_lerp(tree_band_z.x, tree_band_z.y, z)
+		# lerp()는 Variant를 반환해 타입 추론이 깨진다. float 전용 lerpf를 쓴다.
+		var px := lerpf(tree_pixel_size_min, tree_pixel_size_max, depth_t * rng.randf_range(0.7, 1.0))
+
+		var sprite := Sprite3D.new()
+		sprite.texture = tree_texture
+		sprite.billboard = BaseMaterial3D.BILLBOARD_FIXED_Y
+		sprite.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		sprite.alpha_cut = SpriteBase3D.ALPHA_CUT_DISCARD
+		sprite.shaded = true
+		sprite.pixel_size = px
+		sprite.position = Vector3(x, tree_texture.get_height() * px * 0.5, z)
+
+		# 원경 나무의 그림자는 화면에 거의 안 보이면서 그림자맵만 잡아먹는다
+		if depth_t < 0.5:
+			sprite.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+		add_child(sprite)
 
 
 func _spawn_batch(rng: RandomNumberGenerator, tex: Texture2D, count: int) -> void:
