@@ -16,11 +16,14 @@ class PhaseLook:
 	var fog_color: Color
 	var fog_density: float
 	var lantern_energy: float
+	## 등불 스프라이트 자체의 밝기. 1을 넘는 값을 주면 HDR로 처리돼 블룸이 걸린다.
+	var lantern_tint: Color
 
 	func _init(
 		p_light_color: Color, p_light_energy: float, p_sun_pitch: float,
 		p_ambient_color: Color, p_ambient_energy: float, p_glow: float,
-		p_bg: Color, p_fog_color: Color, p_fog_density: float, p_lantern: float
+		p_bg: Color, p_fog_color: Color, p_fog_density: float, p_lantern: float,
+		p_lantern_tint: Color
 	) -> void:
 		light_color = p_light_color
 		light_energy = p_light_energy
@@ -32,14 +35,16 @@ class PhaseLook:
 		fog_color = p_fog_color
 		fog_density = p_fog_density
 		lantern_energy = p_lantern
+		lantern_tint = p_lantern_tint
 
 
 @onready var sun: DirectionalLight3D = $Sun
 @onready var world_environment: WorldEnvironment = $WorldEnvironment
-@onready var lantern_lights: Array = [
-	$Lanterns/LanternA/LightA,
-	$Lanterns/LanternB/LightB,
-]
+
+## Lanterns 아래의 모든 OmniLight3D를 자동으로 모은다.
+## 등불을 씬에 추가할 때마다 코드를 고치지 않아도 되도록 경로를 하드코딩하지 않는다.
+@onready var lantern_lights: Array[Node] = $Lanterns.find_children("*", "OmniLight3D", true, false)
+@onready var lantern_sprites: Array[Node] = $Lanterns.find_children("*", "Sprite3D", true, false)
 
 var _day: PhaseLook
 var _night: PhaseLook
@@ -50,14 +55,16 @@ func _ready() -> void:
 	_day = PhaseLook.new(
 		Color(1.0, 0.95, 0.85), 1.25, -40.0,
 		Color(0.5, 0.55, 0.6), 0.6, 0.85,
-		Color(0.62, 0.73, 0.85), Color(0.68, 0.76, 0.86), 0.006, 0.0
+		Color(0.62, 0.73, 0.85), Color(0.68, 0.76, 0.86), 0.006, 0.0,
+		Color(0.85, 0.85, 0.85)
 	)
 	# 밤에는 글로우를 올린다 — 등불이 번져야 분위기가 산다.
 	# 안개도 짙게 해서 원경을 어둠에 묻는다.
 	_night = PhaseLook.new(
 		Color(0.55, 0.62, 0.95), 0.35, -20.0,
-		Color(0.15, 0.18, 0.35), 0.3, 1.15,
-		Color(0.07, 0.09, 0.18), Color(0.14, 0.18, 0.32), 0.013, 3.0
+		Color(0.12, 0.15, 0.30), 0.16, 1.4,
+		Color(0.05, 0.07, 0.15), Color(0.12, 0.16, 0.30), 0.013, 2.6,
+		Color(2.4, 1.95, 1.15)
 	)
 
 	DayNight.phase_changed.connect(_on_phase_changed)
@@ -92,6 +99,8 @@ func _apply_phase(is_night: bool, animated: bool) -> void:
 		env.fog_density = look.fog_density
 		for light in lantern_lights:
 			(light as OmniLight3D).light_energy = look.lantern_energy
+		for sprite in lantern_sprites:
+			(sprite as Sprite3D).modulate = look.lantern_tint
 		return
 
 	# 이전 전환이 진행 중이면 중단한다. 겹치면 값이 튄다.
@@ -111,3 +120,5 @@ func _apply_phase(is_night: bool, animated: bool) -> void:
 	_tween.tween_property(env, "fog_density", look.fog_density, sec)
 	for light in lantern_lights:
 		_tween.tween_property(light, "light_energy", look.lantern_energy, sec)
+	for sprite in lantern_sprites:
+		_tween.tween_property(sprite, "modulate", look.lantern_tint, sec)

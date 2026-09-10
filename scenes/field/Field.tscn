@@ -1,4 +1,4 @@
-[gd_scene load_steps=34 format=3]
+[gd_scene load_steps=35 format=3]
 
 [ext_resource type="Script" path="res://scripts/field/field.gd" id="1_field"]
 [ext_resource type="Script" path="res://scripts/field/scatter_props.gd" id="2_scatter"]
@@ -102,6 +102,12 @@ texture_filter = 0
 uv1_scale = Vector3(32, 1, 8)
 roughness = 1.0
 
+[sub_resource type="StandardMaterial3D" id="Mat_window_lit"]
+albedo_color = Color(1, 0.86, 0.58, 1)
+emission_enabled = true
+emission = Color(1, 0.76, 0.4, 1)
+emission_energy_multiplier = 2.6
+
 [sub_resource type="StandardMaterial3D" id="Mat_water"]
 albedo_texture = ExtResource("9_water")
 texture_filter = 0
@@ -195,6 +201,26 @@ material = SubResource("Mat_stone")
 size = Vector3(5, 0.55, 4.4)
 position = Vector3(6, 3.4, -4.6)
 material = SubResource("Mat_roof")
+
+[node name="InnWinL" type="CSGBox3D" parent="Buildings"]
+size = Vector3(0.75, 0.95, 0.12)
+position = Vector3(-6.55, 2.25, -2.66)
+material = SubResource("Mat_window_lit")
+
+[node name="InnWinR" type="CSGBox3D" parent="Buildings"]
+size = Vector3(0.75, 0.95, 0.12)
+position = Vector3(-4.25, 2.25, -2.66)
+material = SubResource("Mat_window_lit")
+
+[node name="ShopWinL" type="CSGBox3D" parent="Buildings"]
+size = Vector3(0.75, 0.95, 0.12)
+position = Vector3(5.15, 1.85, -2.76)
+material = SubResource("Mat_window_lit")
+
+[node name="ShopWinR" type="CSGBox3D" parent="Buildings"]
+size = Vector3(0.75, 0.95, 0.12)
+position = Vector3(6.85, 1.85, -2.76)
+material = SubResource("Mat_window_lit")
 
 [node name="Trees" type="Node3D" parent="."]
 
@@ -414,7 +440,6 @@ texture = ExtResource("16_lantern")
 billboard = 2
 texture_filter = 0
 alpha_cut = 1
-shaded = true
 pixel_size = 0.067
 position = Vector3(-2.6, 0.74, 3.1)
 
@@ -422,14 +447,13 @@ position = Vector3(-2.6, 0.74, 3.1)
 position = Vector3(0, 0.42, 0)
 light_color = Color(1, 0.82, 0.5, 1)
 light_energy = 0.0
-omni_range = 6.0
+omni_range = 4.8
 
 [node name="LanternB" type="Sprite3D" parent="Lanterns"]
 texture = ExtResource("16_lantern")
 billboard = 2
 texture_filter = 0
 alpha_cut = 1
-shaded = true
 pixel_size = 0.067
 position = Vector3(2.6, 0.74, 3.1)
 
@@ -437,7 +461,119 @@ position = Vector3(2.6, 0.74, 3.1)
 position = Vector3(0, 0.42, 0)
 light_color = Color(1, 0.82, 0.5, 1)
 light_energy = 0.0
-omni_range = 6.0
+omni_range = 4.8
+
+[node name="LanternC" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(-6.6, 0.74, 2.4)
+
+[node name="LightC" type="OmniLight3D" parent="Lanterns/LanternC"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternD" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(6.6, 0.74, 2.2)
+
+[node name="LightD" type="OmniLight3D" parent="Lanterns/LanternD"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternE" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(-1.6, 0.74, -1.6)
+
+[node name="LightE" type="OmniLight3D" parent="Lanterns/LanternE"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternF" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(-8.6, 0.74, -0.8)
+
+[node name="LightF" type="OmniLight3D" parent="Lanterns/LanternF"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternG" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(8.6, 0.74, -1.4)
+
+[node name="LightG" type="OmniLight3D" parent="Lanterns/LanternG"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternH" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(0.6, 0.74, -6.6)
+
+[node name="LightH" type="OmniLight3D" parent="Lanterns/LanternH"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternI" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(-4.2, 0.74, 5.6)
+
+[node name="LightI" type="OmniLight3D" parent="Lanterns/LanternI"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
+
+[node name="LanternJ" type="Sprite3D" parent="Lanterns"]
+texture = ExtResource("16_lantern")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+pixel_size = 0.067
+position = Vector3(5.0, 0.74, 5.8)
+
+[node name="LightJ" type="OmniLight3D" parent="Lanterns/LanternJ"]
+position = Vector3(0, 0.42, 0)
+light_color = Color(1, 0.82, 0.5, 1)
+light_energy = 0.0
+omni_range = 4.8
 
 [node name="Scatter" type="Node3D" parent="."]
 script = ExtResource("2_scatter")

@@ -38,6 +38,10 @@ func _run() -> void:
 	for i in frames:
 		await process_frame
 
+	# 여기서 FPS를 재지 않는다. 캡처 시점은 아직 셰이더 컴파일 중이라
+	# 실제 성능보다 훨씬 낮게 나온다 (74fps인 씬이 13fps로 찍혔다).
+	# 성능은 워밍업을 거치는 tools/measure_fps.gd로 잰다.
+
 	# 렌더가 실제로 끝난 뒤에 뷰포트를 읽어야 한다.
 	await RenderingServer.frame_post_draw
 

@@ -218,6 +218,23 @@ cmd_shot() {
 	return 1
 }
 
+cmd_bench() {
+	local night="${1:-false}"
+	echo "▶ 성능 측정 (밤: $night) — 워밍업 후 120프레임 평균"
+	local log
+	log="$("$GODOT" --path "$PROJECT_ROOT" --resolution 1280x720 \
+		--script res://tools/measure_fps.gd \
+		-- "--night=$night" 2>&1 | strip_noise)"
+
+	if printf '%s\n' "$log" | grep -q "BENCH avg"; then
+		printf '%s\n' "$log" | grep "BENCH avg" | sed 's/^/    /'
+		return 0
+	fi
+	echo "✗ FAIL — bench"
+	printf '%s\n' "$log" | grep -E "BENCH FAIL|$ERROR_PATTERN" | head -8 | sed 's/^/    /'
+	return 1
+}
+
 cmd_all() {
 	check_binary
 	local rc=0
@@ -242,6 +259,7 @@ case "${1:-all}" in
 	smoke)  check_binary; shift; cmd_smoke "$@" ;;
 	test)   check_binary; shift; cmd_test ;;
 	shot)   check_binary; shift; cmd_shot "$@" ;;
+	bench)  check_binary; shift; cmd_bench "$@" ;;
 	run)    check_binary; shift; cmd_run "$@" ;;
 	all)    cmd_all ;;
 	*)      sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;

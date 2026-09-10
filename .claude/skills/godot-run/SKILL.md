@@ -17,6 +17,8 @@ bash .claude/skills/godot-run/scripts/godot.sh all      # 임포트 → 파싱 �
 bash .claude/skills/godot-run/scripts/godot.sh check    # GDScript 파싱·타입 검사만
 bash .claude/skills/godot-run/scripts/godot.sh smoke    # 씬 로드 + _ready 실행
 bash .claude/skills/godot-run/scripts/godot.sh test     # tests/headless_*.gd
+bash .claude/skills/godot-run/scripts/godot.sh shot out.png true  # 밤 화면 캡처
+bash .claude/skills/godot-run/scripts/godot.sh bench [true]       # 성능 측정 (밤이면 true)
 bash .claude/skills/godot-run/scripts/godot.sh run 15   # 창 모드 15초 (비주얼 확인)
 ```
 
@@ -56,12 +58,25 @@ img.save_png("user://shot.png")
 
 검증 리포트에 비주얼을 "통과"로 적지 말 것. "미검증 — 사용자 눈 확인 필요"로 적는다.
 
-### 3. 첫 실행 전에는 import가 필요하다
+### 3. FPS는 씬 진입 직후에 재면 안 된다
+
+Godot은 씬 진입 직후 셰이더를 컴파일하고 리소스를 업로드하느라 매우 느리다.
+이때 잰 값은 실제 성능과 무관하다 — **74fps로 도는 씬이 13fps로 찍힌 적이 있고,
+스프라이트를 300개 제거했더니 오히려 더 낮게 나오기도 했다.**
+
+성능은 `godot.sh bench`로만 판단한다. 워밍업 180프레임 뒤 120프레임을 재고 평균과 최저를 함께 낸다.
+최저값이 평균보다 크게 낮으면 특정 프레임에 튀는 것이므로 원인을 따로 찾는다.
+
+참고로 이 프로젝트의 마을 씬(스프라이트 300여 개, 광원 11개, DOF·블룸·안개)은
+M3 Mac에서 밤 74fps / 낮 59fps다. 광원을 10개 늘려도 3fps 정도만 줄었다 —
+**광원 개수는 보통 병목이 아니다.**
+
+### 4. 첫 실행 전에는 import가 필요하다
 
 `.godot/` 캐시가 없으면 리소스가 로드되지 않는다. 저장소를 새로 클론했거나 애셋을 추가했으면
 `godot.sh import`를 먼저 돌린다. `all`에는 포함돼 있다.
 
-### 4. `--check-only`는 autoload를 모른다 (오탐)
+### 5. `--check-only`는 autoload를 모른다 (오탐)
 
 `--check-only --script`는 개별 스크립트만 컴파일하므로 `project.godot`의 autoload를 알지 못한다.
 그래서 정상 코드인 `DayNight.toggle()`이 이렇게 잡힌다:
@@ -79,7 +94,7 @@ SCRIPT ERROR: Compile Error: Identifier not found: DayNight
 
 **autoload를 추가하면 `project.godot`에 등록만 하면 된다.** 스크립트는 자동으로 따라간다.
 
-### 5. `--check-only`는 종료 코드를 믿을 수 없다
+### 6. `--check-only`는 종료 코드를 믿을 수 없다
 
 파싱 에러가 있어도 종료 코드가 0으로 나오는 경우가 있다. 그래서 `godot.sh`는 **stderr 문자열**로
 판정한다. 직접 명령을 쓸 일이 있어도 `$?`로 판단하지 말 것.
