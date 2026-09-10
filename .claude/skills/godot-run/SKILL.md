@@ -20,6 +20,9 @@ bash .claude/skills/godot-run/scripts/godot.sh test     # tests/headless_*.gd
 bash .claude/skills/godot-run/scripts/godot.sh shot out.png true  # 밤 화면 캡처
 bash .claude/skills/godot-run/scripts/godot.sh bench [true]       # 성능 측정 (밤이면 true)
 bash .claude/skills/godot-run/scripts/godot.sh run 15   # 창 모드 15초 (비주얼 확인)
+
+# 조작한 뒤의 화면을 찍는다 (인자 순서: 출력, 밤, 입력 타임라인, 씬)
+bash .claude/skills/godot-run/scripts/godot.sh shot out.png false "hold:move_right:40;press:interact"
 ```
 
 `bash`를 붙여 호출한다 — 실행 권한(`chmod +x`)에 의존하지 않으므로 저장소를 새로 클론해도 그대로 동작한다.
@@ -58,7 +61,45 @@ img.save_png("user://shot.png")
 
 검증 리포트에 비주얼을 "통과"로 적지 말 것. "미검증 — 사용자 눈 확인 필요"로 적는다.
 
-### 3. FPS는 씬 진입 직후에 재면 안 된다
+### 3. 조작해야 보이는 화면은 입력 타임라인으로 찍는다
+
+가만히 서 있는 화면만 찍을 수 있으면 **이동·대화창·메뉴는 영영 검증되지 않는다.**
+`shot`의 세 번째 인자에 타임라인을 준다.
+
+| 단계 | 뜻 |
+|------|-----|
+| `wait:<프레임>` | 그냥 기다린다 |
+| `hold:<액션>:<프레임>` | 누른 채 기다렸다 뗀다 (이동) |
+| `press:<액션>` | 한 번 눌렀다 뗀다 (상호작용·메뉴 확정) |
+| `night` | 타임라인 중간에 밤으로 전환 |
+
+```bash
+godot.sh shot _screenshots/talk.png false "hold:move_left:35;press:interact;wait:30"
+```
+
+**구도를 확인할 때는 프레임 수가 아니라 좌표로 지정한다** — 네 번째 인자 `pose`:
+
+```bash
+godot.sh shot _screenshots/west.png false "" "-9.7,0.6"    # 플레이어를 그 좌표에 세우고 찍는다
+```
+
+`hold:<액션>:<프레임>`으로는 "끝까지 걸어간 화면"을 **재현할 수 없다.** 창 모드 fps가
+상황에 따라 크게 흔들려(macOS App Nap 등) 같은 프레임 수가 매번 다른 이동량이 된다.
+실제로 `hold:move_left:90`으로 찍은 화면이 플레이어가 화면 중앙에 있는 상태였는데
+그걸 "서쪽 끝"으로 오독할 뻔했다. 게다가 한 실행이 20분 넘게 걸린 적도 있다.
+
+`pose`는 카메라를 `field_camera.gd`와 **같은 규칙**(오프셋 + 클램프)으로 즉시 계산해 붙인다.
+보간이 끝나기를 기다리면 "몇 프레임 뒤에 도착하는가"가 다시 fps에 의존하게 된다.
+`pose`와 `actions`는 함께 쓸 수 있다 — 먼저 세우고 그 자리에서 조작한다.
+
+**`press`는 폴링과 이벤트를 둘 다 만든다.** `Input.action_press()`는 폴링 상태만 바꾸고
+이벤트를 트리에 흘리지 않아서, `_unhandled_input`으로 받는 상호작용·메뉴가 반응하지 않는다.
+그래서 `Input.parse_input_event(InputEventAction)`을 함께 쏜다.
+
+**InputMap에 없는 액션 이름을 주면 실패로 끊는다.** 조용히 무시하면 아무 일도 안 일어난 화면이
+"정상 캡처"로 넘어가고, 그걸 보고 "기능이 안 된다"고 오판하게 된다.
+
+### 4. FPS는 씬 진입 직후에 재면 안 된다
 
 Godot은 씬 진입 직후 셰이더를 컴파일하고 리소스를 업로드하느라 매우 느리다.
 이때 잰 값은 실제 성능과 무관하다 — **74fps로 도는 씬이 13fps로 찍힌 적이 있고,
@@ -71,7 +112,7 @@ Godot은 씬 진입 직후 셰이더를 컴파일하고 리소스를 업로드�
 M3 Mac에서 밤 74fps / 낮 59fps다. 광원을 10개 늘려도 3fps 정도만 줄었다 —
 **광원 개수는 보통 병목이 아니다.**
 
-### 4. 텍스처를 고쳤으면 반드시 import 한다
+### 5. 텍스처를 고쳤으면 반드시 import 한다
 
 `.godot/` 캐시가 없으면 리소스가 로드되지 않는다. 저장소를 새로 클론했거나 애셋을 추가했으면
 `godot.sh import`를 먼저 돌린다. `all`에는 포함돼 있다.
@@ -81,7 +122,7 @@ M3 Mac에서 밤 74fps / 낮 59fps다. 광원을 10개 늘려도 3fps 정도만 
 **바뀌기 전 이미지가 그대로 나온다** — 실제로 이 때문에 "수정이 반영되지 않았다"고 오판한 적이 있다.
 텍스처 생성 → `import` → `shot` 순서를 지킨다.
 
-### 5. `--check-only`는 autoload를 모른다 (오탐)
+### 6. `--check-only`는 autoload를 모른다 (오탐)
 
 `--check-only --script`는 개별 스크립트만 컴파일하므로 `project.godot`의 autoload를 알지 못한다.
 그래서 정상 코드인 `DayNight.toggle()`이 이렇게 잡힌다:
@@ -99,7 +140,7 @@ SCRIPT ERROR: Compile Error: Identifier not found: DayNight
 
 **autoload를 추가하면 `project.godot`에 등록만 하면 된다.** 스크립트는 자동으로 따라간다.
 
-### 6. `--check-only`는 종료 코드를 믿을 수 없다
+### 7. `--check-only`는 종료 코드를 믿을 수 없다
 
 파싱 에러가 있어도 종료 코드가 0으로 나오는 경우가 있다. 그래서 `godot.sh`는 **stderr 문자열**로
 판정한다. 직접 명령을 쓸 일이 있어도 `$?`로 판단하지 말 것.

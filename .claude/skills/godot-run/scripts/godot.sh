@@ -8,6 +8,10 @@
 #   ./godot.sh test            tests/headless_*.gd 실행
 #   ./godot.sh all             import → check → smoke → test 순차 실행
 #   ./godot.sh run [초]        창 모드 실행 (비주얼 확인용, 기본 10초)
+#   ./godot.sh shot <출력> [밤] [입력타임라인] [위치x,z] [씬]
+#                              스크린샷. 조작 후 화면이나 특정 좌표의 구도를 찍을 수 있다:
+#                              shot _screenshots/walk.png false "hold:move_right:40;press:interact"
+#                              shot _screenshots/west.png false "" "-9.7,0.6"
 #
 # 종료 코드: 0 = 통과, 1 = 실패
 
@@ -192,13 +196,16 @@ cmd_run() {
 cmd_shot() {
 	local out="${1:-_screenshots/shot.png}"
 	local night="${2:-false}"
-	local scene="${3:-res://scenes/main/Main.tscn}"
-	echo "▶ 스크린샷 캡처 → $out (밤: $night)"
+	local actions="${3:-}"
+	local pose="${4:-}"
+	local scene="${5:-res://scenes/main/Main.tscn}"
+	echo "▶ 스크린샷 캡처 → $out (밤: $night${pose:+, 위치: $pose}${actions:+, 입력: $actions})"
 	# 헤드리스는 dummy 렌더러라 빈 이미지가 나온다. 창 모드로 실행하되 사용자 개입 없이 끝난다.
 	local log
 	log="$("$GODOT" --path "$PROJECT_ROOT" --resolution 1280x720 \
 		--script res://tools/capture_screenshot.gd \
-		-- "--scene=$scene" "--out=res://$out" "--night=$night" 2>&1 | strip_noise)"
+		-- "--scene=$scene" "--out=res://$out" "--night=$night" \
+		"--actions=$actions" "--pose=$pose" 2>&1 | strip_noise)"
 
 	if printf '%s\n' "$log" | grep -q "CAPTURE OK"; then
 		# 캡처가 성공해도 스크립트가 죽어 있으면 화면 일부가 통째로 비어 있다.
