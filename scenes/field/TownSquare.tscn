@@ -17,6 +17,18 @@
 [ext_resource type="Shader" path="res://shaders/vignette.gdshader" id="15_vignette"]
 [ext_resource type="Script" path="res://scripts/field/scatter_props.gd" id="16_scatter"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/light_glow.png" id="17_glow"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_00.png" id="20_c00"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_01.png" id="20_c01"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_02.png" id="20_c02"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_03.png" id="20_c03"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_04.png" id="20_c04"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_05.png" id="20_c05"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_06.png" id="20_c06"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_07.png" id="20_c07"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_08.png" id="20_c08"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_09.png" id="20_c09"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_10.png" id="20_c10"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_crowd_11.png" id="20_c11"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
 shader = ExtResource("15_vignette")
@@ -234,6 +246,46 @@ material = SubResource("Mat_facade")
 size = Vector3(11, 0.7, 8)
 position = Vector3(16, 7.85, -10)
 material = SubResource("Mat_slate")
+
+[node name="MainCornice" type="CSGBox3D" parent="Buildings"]
+size = Vector3(20, 0.55, 7.6)
+position = Vector3(0, 10.2, -14)
+material = SubResource("Mat_stone")
+
+[node name="MainMidBand" type="CSGBox3D" parent="Buildings"]
+size = Vector3(19.4, 0.4, 7.3)
+position = Vector3(0, 5.4, -14)
+material = SubResource("Mat_stone")
+
+[node name="LeftCornice" type="CSGBox3D" parent="Buildings"]
+size = Vector3(10.6, 0.45, 7.4)
+position = Vector3(-16, 7.3, -10)
+material = SubResource("Mat_stone")
+
+[node name="RightCornice" type="CSGBox3D" parent="Buildings"]
+size = Vector3(10.6, 0.45, 7.4)
+position = Vector3(16, 7.3, -10)
+material = SubResource("Mat_stone")
+
+[node name="PillarA" type="CSGBox3D" parent="Buildings"]
+size = Vector3(1.1, 9.6, 1.1)
+position = Vector3(-6.6, 4.8, -10.2)
+material = SubResource("Mat_stone")
+
+[node name="PillarB" type="CSGBox3D" parent="Buildings"]
+size = Vector3(1.1, 9.6, 1.1)
+position = Vector3(6.6, 4.8, -10.2)
+material = SubResource("Mat_stone")
+
+[node name="PillarCapA" type="CSGBox3D" parent="Buildings"]
+size = Vector3(1.6, 0.5, 1.6)
+position = Vector3(-6.6, 9.7, -10.2)
+material = SubResource("Mat_stone")
+
+[node name="PillarCapB" type="CSGBox3D" parent="Buildings"]
+size = Vector3(1.6, 0.5, 1.6)
+position = Vector3(6.6, 9.7, -10.2)
+material = SubResource("Mat_stone")
 
 [node name="Props" type="Node3D" parent="."]
 
@@ -616,7 +668,7 @@ position = Vector3(3.4, 0.8, -0.8)
 
 [node name="Crowd" type="Node3D" parent="."]
 script = ExtResource("16_scatter")
-npc_textures = Array[Texture2D]([ExtResource("12_player"), ExtResource("13_npc_a"), ExtResource("14_npc_b")])
+npc_textures = Array[Texture2D]([ExtResource("20_c00"), ExtResource("20_c01"), ExtResource("20_c02"), ExtResource("20_c03"), ExtResource("20_c04"), ExtResource("20_c05"), ExtResource("20_c06"), ExtResource("20_c07"), ExtResource("20_c08"), ExtResource("20_c09"), ExtResource("20_c10"), ExtResource("20_c11")])
 npc_count = 16
 npc_area_size = Vector2(23, 9)
 npc_area_center = Vector2(0, -2.5)
