@@ -78,10 +78,10 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# 개발 편의용 낮/밤 토글. M1에서 정식 입력 맵으로 옮긴다.
-	if event is InputEventKey and event.pressed and not event.echo:
-		if (event as InputEventKey).keycode == KEY_N:
-			DayNight.toggle()
+	# 개발 편의용 낮/밤 토글 (M3 이후 여관 숙박으로 옮긴다).
+	# 키를 하드코딩하지 않고 입력 맵의 toggle_phase 액션을 쓴다 — 게임패드 Y도 함께 걸린다.
+	if event.is_action_pressed("toggle_phase"):
+		DayNight.toggle()
 
 
 func _on_phase_changed(is_night: bool) -> void:
