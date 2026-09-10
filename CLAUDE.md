@@ -38,3 +38,6 @@ Godot 4.7로 만드는 옥토패스 트래블러 2 스타일 HD-2D JRPG 프로�
 | 2026-09-10 | 성능 측정 도구 `bench` 추가 | tools/measure_fps.gd, skills/godot-run | 캡처 직후 FPS는 셰이더 컴파일 중이라 74fps를 13fps로 오독했음 |
 | 2026-09-10 | 볼류메트릭 안개 → 빛무리 스프라이트로 대체 | scenes/field/TownSquare.tscn | 볼류메트릭이 프레임 스파이크 유발 (평균 85fps, 최저 16fps) |
 | 2026-09-10 | 밤 도시 연출 항목 대폭 보강 | skills/hd2d-visual | 창문 발광 마스크, 빛무리, SSR, 알파 블렌딩 함정, 군중 클러스터링 |
+| 2026-09-10 | 스크린샷에 입력 타임라인 추가 | tools/capture_screenshot.gd, skills/godot-run | 정지 화면만 찍을 수 있어 이동·대화창·메뉴는 검증할 수단이 아예 없었음 |
+| 2026-09-10 | 스크린샷에 `pose` 모드 추가 | tools/capture_screenshot.gd, skills/godot-run | 창 모드 fps가 흔들려 `hold:N프레임`의 이동량이 매번 달라짐. 중앙에 선 화면을 "서쪽 끝"으로 오독할 뻔했음 |
+| 2026-09-10 | 전경 프레이밍을 카메라 자식으로 이동 | scenes/field/Field.tscn | 추적 카메라가 x로 ±5 움직이면 월드 고정 전경이 화면 중앙으로 밀려들어 플레이어를 가림 (기하학적으로 양립 불가) |
