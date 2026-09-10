@@ -28,6 +28,25 @@ func _init() -> void:
 	_save(_make_character(Color(0.35, 0.45, 0.75), Color(0.9, 0.75, 0.6)), "char_npc_a.png")
 	_save(_make_character(Color(0.5, 0.65, 0.4), Color(0.85, 0.7, 0.55)), "char_npc_b.png")
 
+	# 군중 — 옷·피부·머리 조합으로 12종. 같은 얼굴이 반복되면 인파로 안 보인다.
+	var crowd := [
+		[Color8(178, 74, 66), Color8(242, 206, 170), Color8(58, 42, 34)],
+		[Color8(70, 92, 156), Color8(226, 186, 148), Color8(38, 32, 30)],
+		[Color8(96, 132, 84), Color8(210, 168, 128), Color8(112, 78, 44)],
+		[Color8(154, 118, 62), Color8(244, 212, 178), Color8(72, 54, 40)],
+		[Color8(122, 78, 140), Color8(198, 152, 116), Color8(46, 38, 36)],
+		[Color8(58, 116, 122), Color8(236, 198, 160), Color8(140, 104, 56)],
+		[Color8(190, 132, 78), Color8(184, 138, 102), Color8(34, 30, 28)],
+		[Color8(88, 88, 104), Color8(240, 204, 168), Color8(158, 142, 118)],
+		[Color8(166, 96, 118), Color8(214, 172, 134), Color8(64, 46, 36)],
+		[Color8(74, 108, 68), Color8(196, 150, 112), Color8(96, 66, 40)],
+		[Color8(132, 62, 58), Color8(232, 194, 156), Color8(120, 92, 52)],
+		[Color8(102, 114, 168), Color8(206, 162, 124), Color8(50, 40, 34)],
+	]
+	for i in crowd.size():
+		var pal: Array = crowd[i]
+		_save(_make_character(pal[0], pal[1], pal[2]), "char_crowd_%02d.png" % i)
+
 	# M2 — 마을을 채우는 소품들
 	_save(_make_roof(), "roof.png")
 	_save(_make_cliff(), "cliff.png")
@@ -704,6 +723,38 @@ func _make_facade() -> Array:
 		for x in size:
 			alb.set_pixel(x, y, seam)
 
+	# 벽기둥(pilaster) — 창문 사이와 양 끝에 세로로 세운다.
+	# 왼쪽에 하이라이트, 오른쪽에 그림자를 넣으면 평면 벽이 돌출돼 보인다.
+	var stone_hi := Color8(200, 192, 176)
+	var stone_sh := Color8(112, 105, 96)
+	for band_x in [0, 27, 58]:
+		for w in 6:
+			var px: int = int(band_x) + w
+			if px >= size:
+				continue
+			for y in size:
+				var c: Color
+				if w <= 1:
+					c = stone_hi
+				elif w >= 4:
+					c = stone_sh
+				else:
+					c = _pick(stone)
+				alb.set_pixel(px, y, c)
+
+	# 층을 나누는 코니스. 위가 밝고 아래에 그림자가 깔려야 처마처럼 읽힌다.
+	for y_base in [30, 61]:
+		var rows := [
+			[0, Color8(210, 202, 186)], [1, Color8(190, 182, 166)],
+			[2, stone_sh], [3, Color8(92, 86, 78)],
+		]
+		for r in rows:
+			var y: int = int(y_base) + int(r[0])
+			if y >= size:
+				continue
+			for x in size:
+				alb.set_pixel(x, y, r[1])
+
 	# 창문 2×2. 각 창은 아치형이며, 같은 픽셀을 발광 마스크에도 찍는다.
 	var win_w := 14
 	var win_h := 20
@@ -745,15 +796,25 @@ func _make_facade() -> Array:
 					alb.set_pixel(px, py, frame)
 					emi.set_pixel(px, py, Color(0, 0, 0, 1))
 
+			# 창문 아래 받침(sill) — 창이 벽에 그냥 뚫린 구멍처럼 보이지 않게 한다
+			var sill_y := oy + win_h
+			if sill_y < size:
+				for wx in range(-2, win_w + 2):
+					var px: int = ox + wx
+					if px < 0 or px >= size:
+						continue
+					alb.set_pixel(px, sill_y, Color8(204, 196, 180))
+					if sill_y + 1 < size:
+						alb.set_pixel(px, sill_y + 1, Color8(104, 98, 90))
+
 	return [alb, emi]
 
 
 ## 간단한 인물 실루엣. 16x24는 SNES급 JRPG 캐릭터의 전형적인 크기다.
-func _make_character(cloth: Color, skin: Color) -> Image:
+func _make_character(cloth: Color, skin: Color, hair: Color = Color8(58, 42, 34)) -> Image:
 	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 
-	var hair := Color8(58, 42, 34)
 	var boot := Color8(62, 48, 38)
 	var cloth_dark := cloth.darkened(0.25)
 
