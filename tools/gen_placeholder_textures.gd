@@ -47,6 +47,21 @@ func _init() -> void:
 		var pal: Array = crowd[i]
 		_save(_make_character(pal[0], pal[1], pal[2]), "char_crowd_%02d.png" % i)
 
+	# M1 — 4방향 걷기 시트 (64x96 = 16x24 셀 4열 4행)
+	#
+	# 기존 char_*.png(1프레임 정지)는 TownSquare가 hframes=1로 쓰고 있으므로 건드리지 않는다.
+	# 시트는 _sheet 접미사를 붙인 별도 파일로 낸다.
+	_save(_make_character_sheet(Color(0.85, 0.35, 0.3), Color(0.95, 0.8, 0.65)),
+		"char_player_sheet.png")
+	_save(_make_character_sheet(Color(0.35, 0.45, 0.75), Color(0.9, 0.75, 0.6)),
+		"char_npc_a_sheet.png")
+	_save(_make_character_sheet(Color(0.5, 0.65, 0.4), Color(0.85, 0.7, 0.55)),
+		"char_npc_b_sheet.png")
+	# 떠돌이 악사 유리 — 보랏빛 외투에 금발. 상인(파랑)·경비병(초록)과 색상환에서 멀어
+	# 광장에 셋이 함께 서 있어도 실루엣만 보고 구분된다.
+	_save(_make_character_sheet(Color(0.55, 0.42, 0.72), Color(0.92, 0.78, 0.63),
+		Color(0.72, 0.62, 0.36)), "char_npc_c_sheet.png")
+
 	# M2 — 마을을 채우는 소품들
 	_save(_make_roof(), "roof.png")
 	_save(_make_cliff(), "cliff.png")
@@ -78,6 +93,13 @@ func _init() -> void:
 	var facade := _make_facade()
 	_save(facade[0], "facade.png")
 	_save(facade[1], "facade_emission.png")
+
+	# M1 — 상호작용 가능 표시.
+	#
+	# **반드시 마지막에 생성한다.** 위의 텍스처들은 고정 시드 난수 스트림을 순서대로 소비하므로,
+	# 중간에 randi/randf를 쓰는 생성기를 끼워 넣으면 그 뒤 모든 텍스처가 달라진다.
+	# 이 함수는 난수를 전혀 쓰지 않지만, 순서 규칙 자체를 지켜 두는 편이 안전하다.
+	_save(_make_interact_marker(), "interact_marker.png")
 
 	print("TEXGEN OK")
 	quit(0)
@@ -810,6 +832,48 @@ func _make_facade() -> Array:
 	return [alb, emi]
 
 
+## 상호작용 가능 표시 — 느낌표 말풍선 8x11.
+##
+## 크기를 8px로 잡은 이유: 캐릭터와 같은 pixel_size(0.067)로 놓아야 도트 밀도가 어긋나지 않는다.
+## 8x11이면 월드에서 0.54 x 0.74m로, 1.6m짜리 캐릭터 머리 위에 얹기에 알맞다.
+## 12px 이상으로 만들면 머리보다 커져 캐릭터를 가린다.
+##
+## 난수를 쓰지 않는다 — 이 파일의 시드 고정 스트림에 끼어들지 않기 위해서다(_init의 주석 참고).
+func _make_interact_marker() -> Image:
+	var img := Image.create(8, 11, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+
+	var line := Color8(38, 32, 28)
+	var fill := Color8(250, 244, 222)
+	var mark := Color8(206, 62, 52)
+
+	# 말풍선 본체 y0~7. 네 모서리를 비워 둥글게 보이게 한다.
+	for y in range(0, 8):
+		for x in range(0, 8):
+			var corner: bool = (x == 0 or x == 7) and (y == 0 or y == 7)
+			if corner:
+				continue
+			var edge: bool = x == 0 or x == 7 or y == 0 or y == 7
+			img.set_pixel(x, y, line if edge else fill)
+
+	# 아래로 뻗은 꼬리 y8~10. 점점 좁아져야 말풍선으로 읽힌다.
+	img.set_pixel(2, 8, line)
+	img.set_pixel(3, 8, fill)
+	img.set_pixel(4, 8, fill)
+	img.set_pixel(5, 8, line)
+	img.set_pixel(3, 9, line)
+	img.set_pixel(4, 9, line)
+	img.set_pixel(3, 10, line)
+
+	# 느낌표 — 막대(y2~4) + 간격(y5) + 점(y6). 간격이 없으면 그냥 막대로 보인다.
+	for y in range(2, 5):
+		img.set_pixel(3, y, mark)
+		img.set_pixel(4, y, mark)
+	img.set_pixel(3, 6, mark)
+	img.set_pixel(4, 6, mark)
+	return img
+
+
 ## 간단한 인물 실루엣. 16x24는 SNES급 JRPG 캐릭터의 전형적인 크기다.
 func _make_character(cloth: Color, skin: Color, hair: Color = Color8(58, 42, 34)) -> Image:
 	var img := Image.create(16, 24, false, Image.FORMAT_RGBA8)
@@ -854,5 +918,209 @@ func _make_character(cloth: Color, skin: Color, hair: Color = Color8(58, 42, 34)
 		img.set_pixel(x, 22, boot)
 	for x in range(8, 11):
 		img.set_pixel(x, 22, boot)
+
+	return img
+
+
+# ── M1: 4방향 걷기 시트 ──────────────────────────────────────
+#
+# 셀 16x24 (기존 _make_character와 동일), 시트 64x96.
+# 가로 4칸 = 걷기 프레임, 세로 4칸 = 방향.
+#   행: 0=남(정면) 1=서(왼쪽) 2=동(오른쪽) 3=북(뒷모습)
+#   열: 0=대기 1=왼발 앞 2=대기 3=오른발 앞
+# 0과 2를 같은 대기 포즈로 두어야 0→1→2→3 순환이 끊기지 않는다.
+# Sprite3D에서 hframes=4, vframes=4, frame = 방향행 * 4 + 프레임열.
+
+const SHEET_COLS := 4
+const SHEET_ROWS := 4
+const CELL_W := 16
+const CELL_H := 24
+
+# 행 인덱스. 스크립트 쪽에서도 같은 순서를 쓴다.
+const DIR_SOUTH := 0
+const DIR_WEST := 1
+const DIR_EAST := 2
+const DIR_NORTH := 3
+
+
+func _make_character_sheet(cloth: Color, skin: Color, hair: Color = Color8(58, 42, 34)) -> Image:
+	var sheet := Image.create(CELL_W * SHEET_COLS, CELL_H * SHEET_ROWS, false, Image.FORMAT_RGBA8)
+	sheet.fill(Color(0, 0, 0, 0))
+
+	var cell := Rect2i(0, 0, CELL_W, CELL_H)
+	for step in SHEET_COLS:
+		var x := step * CELL_W
+
+		sheet.blit_rect(_make_char_frame(DIR_SOUTH, step, cloth, skin, hair),
+			cell, Vector2i(x, DIR_SOUTH * CELL_H))
+
+		# 동쪽은 서쪽을 좌우 반전해서 만든다. 손으로 두 벌을 그리면 도트가 미묘하게
+		# 어긋나 좌우로 걸을 때 캐릭터가 다른 사람처럼 보인다.
+		var west := _make_char_frame(DIR_WEST, step, cloth, skin, hair)
+		sheet.blit_rect(west, cell, Vector2i(x, DIR_WEST * CELL_H))
+		var east := west.duplicate() as Image
+		east.flip_x()
+		sheet.blit_rect(east, cell, Vector2i(x, DIR_EAST * CELL_H))
+
+		sheet.blit_rect(_make_char_frame(DIR_NORTH, step, cloth, skin, hair),
+			cell, Vector2i(x, DIR_NORTH * CELL_H))
+
+	return sheet
+
+
+## 걷기 시트의 셀 한 장. dir는 DIR_* (동쪽은 서쪽을 반전하므로 여기서 그리지 않는다).
+func _make_char_frame(dir: int, step: int, cloth: Color, skin: Color, hair: Color) -> Image:
+	var img := Image.create(CELL_W, CELL_H, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+
+	var boot := Color8(62, 48, 38)
+	var boot_far := boot.darkened(0.3)
+	var cloth_dark := cloth.darkened(0.25)
+	var cloth_far := cloth.darkened(0.5)
+	var hair_dark := hair.darkened(0.35)
+	var skin_dark := skin.darkened(0.2)
+	var eye := Color8(40, 34, 30)
+
+	# 상하 바운스 — 대기(0,2)에서 상체를 1px 올린다. 발은 바닥에 고정되므로
+	# 다리 길이가 늘었다 줄며 걷는 느낌이 난다. 2px 이상 흔들면 통통 뛰는 것처럼 보인다.
+	var bob := -1 if step % 2 == 0 else 0
+	# 걸음 방향: +1 = 왼발 앞, -1 = 오른발 앞, 0 = 두 발 모음
+	var swing := 0
+	if step == 1:
+		swing = 1
+	elif step == 3:
+		swing = -1
+
+	var head_top := 2 + bob
+	var torso_top := 10 + bob
+	var leg_top := 18 + bob
+
+	if dir == DIR_WEST:
+		# ── 옆모습 ──
+		# 머리를 정면보다 한 칸 앞(왼쪽)으로 밀어 얼굴이 진행 방향을 보게 한다.
+		for y in range(head_top, head_top + 8):
+			for x in range(4, 10):
+				img.set_pixel(x, y, skin)
+		# 정수리 + 뒤통수(오른쪽)를 머리카락이 덮는다 — 옆모습의 가장 큰 단서
+		for x in range(4, 10):
+			img.set_pixel(x, head_top, hair)
+			img.set_pixel(x, head_top + 1, hair)
+		for y in range(head_top, head_top + 6):
+			img.set_pixel(9, y, hair)
+		img.set_pixel(10, head_top + 2, hair)
+		img.set_pixel(10, head_top + 3, hair)
+		# 코 — 실루엣이 한 칸 튀어나와야 옆얼굴로 읽힌다
+		img.set_pixel(3, head_top + 4, skin)
+		# 턱 끝을 깎아 실루엣을 좁힌다
+		img.set_pixel(4, head_top + 7, Color(0, 0, 0, 0))
+		# 눈은 하나만
+		img.set_pixel(5, head_top + 4, eye)
+
+		# 몸통 — 정면(8칸)보다 좁은 6칸. 뒤쪽 모서리에 그림자를 넣어 두께를 만든다.
+		for y in range(torso_top, torso_top + 8):
+			for x in range(5, 11):
+				img.set_pixel(x, y, cloth if x < 10 else cloth_dark)
+
+		# 팔도 하나만 보인다. 앞뒤로 흔들리는 위치가 프레임 1과 3을 구분해 준다.
+		# 뒤로 뻗은 팔은 몸통(x5~10) 밖으로 한 칸 나와야 실루엣에 보인다.
+		# x9에 두면 몸통에 완전히 가려 프레임 1과 3이 구분되지 않는다 — 실제로 그렇게 나왔다.
+		var arm_x := 5
+		if swing > 0:
+			arm_x = 3
+		elif swing < 0:
+			arm_x = 10
+		for y in range(torso_top + 2, torso_top + 6):
+			img.set_pixel(arm_x, y, cloth_dark)
+			img.set_pixel(arm_x + 1, y, cloth_dark)
+		img.set_pixel(arm_x, torso_top + 6, skin)
+		img.set_pixel(arm_x + 1, torso_top + 6, skin)
+
+		if swing == 0:
+			# 두 다리가 겹친 대기 자세. 발끝만 앞으로 한 칸 내민다.
+			for y in range(leg_top, 22):
+				for x in range(6, 9):
+					img.set_pixel(x, y, cloth_dark)
+			for x in range(5, 9):
+				img.set_pixel(x, 22, boot)
+		else:
+			# 성큼 벌린 자세. 가까운 다리를 밝게, 먼 다리를 어둡게 칠해
+			# 실루엣이 같은 1·3 프레임을 구분한다.
+			var front_c := cloth_dark if swing > 0 else cloth_far
+			var back_c := cloth_far if swing > 0 else cloth_dark
+			var front_boot := boot if swing > 0 else boot_far
+			var back_boot := boot_far if swing > 0 else boot
+			for y in range(leg_top, 22):
+				for x in range(4, 7):
+					img.set_pixel(x, y, front_c)
+				for x in range(8, 11):
+					img.set_pixel(x, y, back_c)
+			for x in range(3, 7):
+				img.set_pixel(x, 22, front_boot)
+			for x in range(8, 12):
+				img.set_pixel(x, 22, back_boot)
+		return img
+
+	# ── 정면(남) / 뒷모습(북) ──
+	for y in range(head_top, head_top + 8):
+		for x in range(5, 11):
+			img.set_pixel(x, y, skin if dir == DIR_SOUTH else hair)
+	for x in range(5, 11):
+		img.set_pixel(x, head_top, hair)
+		img.set_pixel(x, head_top + 1, hair)
+	img.set_pixel(4, head_top + 1, hair)
+	img.set_pixel(4, head_top + 2, hair)
+	img.set_pixel(11, head_top + 1, hair)
+	img.set_pixel(11, head_top + 2, hair)
+
+	if dir == DIR_SOUTH:
+		# 눈 — 2픽셀이면 충분히 얼굴로 읽힌다
+		img.set_pixel(6, head_top + 4, eye)
+		img.set_pixel(9, head_top + 4, eye)
+	else:
+		# 뒷모습: 눈이 없고 뒤통수 전체가 머리카락. 가르마 한 줄과 목덜미를 넣어야
+		# "얼굴을 지운 정면"이 아니라 뒤통수로 읽힌다.
+		for y in range(head_top + 2, head_top + 7):
+			img.set_pixel(7, y, hair_dark)
+		for x in range(6, 10):
+			img.set_pixel(x, head_top + 7, skin_dark)
+
+	# 몸통
+	for y in range(torso_top, torso_top + 8):
+		for x in range(4, 12):
+			img.set_pixel(x, y, cloth if x > 4 and x < 11 else cloth_dark)
+
+	# 팔 — 정면/뒷면에서는 앞뒤 스윙이 보이지 않으므로 위아래로 1px 어긋나게 해
+	# 팔이 움직인다는 것만 전달한다. 다리와 반대쪽 팔이 나간다.
+	for k in 5:
+		img.set_pixel(3, torso_top + 1 + swing + k, skin)
+		img.set_pixel(12, torso_top + 1 - swing + k, skin)
+
+	# 다리 — 내딛는 발은 바깥으로 한 칸 벌리고 바닥까지, 반대 발은 1px 들어 올린다
+	var lx_l := 5
+	var lx_r := 8
+	var l_bottom := 21
+	var r_bottom := 21
+	if swing > 0:
+		lx_l = 4
+		r_bottom = 20
+	elif swing < 0:
+		lx_r = 9
+		l_bottom = 20
+	for y in range(leg_top, l_bottom + 1):
+		for x in range(lx_l, lx_l + 3):
+			img.set_pixel(x, y, cloth_dark)
+	for y in range(leg_top, r_bottom + 1):
+		for x in range(lx_r, lx_r + 3):
+			img.set_pixel(x, y, cloth_dark)
+	for x in range(lx_l, lx_l + 3):
+		img.set_pixel(x, l_bottom + 1, boot)
+	for x in range(lx_r, lx_r + 3):
+		img.set_pixel(x, r_bottom + 1, boot)
+	if swing == 0:
+		# 두 다리를 붙여 세우면 한 덩어리가 돼 치마처럼 보인다.
+		# 가운데에 어두운 이음선을 넣어 다리가 둘이라는 것만 알린다.
+		for y in range(leg_top, 22):
+			img.set_pixel(7, y, cloth_far)
+		img.set_pixel(7, 22, boot_far)
 
 	return img
