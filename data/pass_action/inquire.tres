@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PassActionData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/pass_action_data.gd" id="1_v1qj5"]
+
+[resource]
+script = ExtResource("1_v1qj5")
+action_id = "inquire"
+display_name = "정보수집"
+judge_kind = 1
+difficulty_limit = 3
+success_flag = "pa_inquire_{npc}"
+success_line = "{name}이(가) 잠시 망설이다 목소리를 낮춘다."
+failure_line = "…미안하지만, 낯선 이에게 할 이야기는 아니야."
+repeatable = true

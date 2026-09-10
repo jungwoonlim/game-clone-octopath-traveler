@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="PassActionData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/pass_action_data.gd" id="1_snx4t"]
+
+[resource]
+script = ExtResource("1_snx4t")
+action_id = "challenge"
+display_name = "도전"
+judge_kind = 4
+level_limit = 8
+success_flag = "pa_challenge_{npc}"
+success_line = "{name}이(가) 자세를 낮춘다. …하지만 결투는 아직 이르다. (M3에서 전투로 이어진다)"
+failure_line = "\"Lv.{level}인 나를? 실력을 더 쌓고 오도록.\""

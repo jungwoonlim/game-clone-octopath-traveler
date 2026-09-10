@@ -1,0 +1,35 @@
+[gd_resource type="Resource" script_class="NpcData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_pass_action.gd" id="1_m3j4i"]
+[ext_resource type="Resource" path="res://data/pass_action/inquire.tres" id="2_lw7u7"]
+[ext_resource type="Resource" path="res://data/pass_action/scrutinize.tres" id="3_0pd8j"]
+[ext_resource type="Resource" path="res://data/pass_action/allure.tres" id="4_wx0oc"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="5_tvs8h"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_a_sheet.png" id="6_m0wsn"]
+
+[sub_resource type="Resource" id="Resource_kb438"]
+script = ExtResource("1_m3j4i")
+action = ExtResource("2_lw7u7")
+success_line = "\"수로 얘기요? 위쪽 물레방앗간 주인이 사흘째 안 보인대요.\""
+
+[sub_resource type="Resource" id="Resource_ocije"]
+script = ExtResource("1_m3j4i")
+action = ExtResource("3_0pd8j")
+success_line = "청과상 리네 — Lv.{level} / 경계도 {difficulty}
+앞치마 주머니에 낡은 열쇠 하나."
+
+[sub_resource type="Resource" id="Resource_vhywi"]
+script = ExtResource("1_m3j4i")
+action = ExtResource("4_wx0oc")
+success_line = "리네가 좌판을 덮고 등불을 든다. \"길 안내 정도는 해 드릴게요.\""
+
+[resource]
+script = ExtResource("5_tvs8h")
+npc_id = "rine"
+display_name = "청과상 리네"
+sprite = ExtResource("6_m0wsn")
+difficulty = 2
+level = 3
+day_lines = PackedStringArray("어서 와요. 오늘 사과는 강 건너 과수원에서 새벽에 실어 온 거예요.", "광장 분수 물이 요즘 탁해졌다는 말이 돌아요. 위쪽 수로에 뭔가 있는 거겠죠.")
+night_lines = PackedStringArray("이 시간까지 좌판을 접지 못했네요. 남은 걸 다 팔아야 방값이 나와서요.", "밤엔 골목 쪽으로 돌아가지 마세요. 등불이 죄다 꺼져 있거든요.")
+pass_actions = Array[ExtResource("1_m3j4i")]([SubResource("Resource_kb438"), SubResource("Resource_ocije"), SubResource("Resource_vhywi")])

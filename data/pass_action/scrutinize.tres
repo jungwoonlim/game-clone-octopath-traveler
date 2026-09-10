@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="PassActionData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/pass_action_data.gd" id="1_q2the"]
+
+[resource]
+script = ExtResource("1_q2the")
+action_id = "scrutinize"
+display_name = "조사"
+is_night = true
+judge_kind = 1
+difficulty_limit = 3
+success_flag = "pa_scrutinize_{npc}"
+success_line = "{name} — Lv.{level} / 경계도 {difficulty}"
+failure_line = "시선이 마주쳤다. 이 사람은 읽히지 않는다."
+repeatable = true

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="PassActionData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/pass_action_data.gd" id="1_ip2u7"]
+
+[resource]
+script = ExtResource("1_ip2u7")
+action_id = "allure"
+display_name = "유혹"
+is_night = true
+judge_kind = 3
+required_flag = "pa_inquire_{npc}"
+success_flag = "pa_allure_{npc}"
+success_line = "{name}이(가) 고개를 끄덕이고 등불 아래로 따라나선다."
+failure_line = "그는 당신을 훑어보더니 등을 돌린다. 아직 당신을 모른다."

@@ -1,0 +1,42 @@
+[gd_resource type="Resource" script_class="NpcData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_pass_action.gd" id="1_w8w7q"]
+[ext_resource type="Resource" path="res://data/pass_action/inquire.tres" id="2_0pbsn"]
+[ext_resource type="Resource" path="res://data/pass_action/challenge.tres" id="3_k6wyw"]
+[ext_resource type="Resource" path="res://data/pass_action/scrutinize.tres" id="4_a5bou"]
+[ext_resource type="Resource" path="res://data/pass_action/allure.tres" id="5_j2n44"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="6_cic55"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_c_sheet.png" id="7_1ahxx"]
+
+[sub_resource type="Resource" id="Resource_agd46"]
+script = ExtResource("1_w8w7q")
+action = ExtResource("2_0pbsn")
+success_line = "\"북쪽 길을 막은 건 눈사태가 아니에요. 누가 막아 둔 거죠.\""
+
+[sub_resource type="Resource" id="Resource_i734i"]
+script = ExtResource("1_w8w7q")
+action = ExtResource("3_k6wyw")
+success_line = "유리가 류트를 내려놓는다. \"노래 대결이라면 얼마든지요.\""
+
+[sub_resource type="Resource" id="Resource_v2pf2"]
+script = ExtResource("1_w8w7q")
+action = ExtResource("4_a5bou")
+success_line = "떠돌이 악사 유리 — Lv.{level} / 경계도 {difficulty}
+류트 안쪽에 다른 마을 문장이 새겨져 있다."
+
+[sub_resource type="Resource" id="Resource_g1j2r"]
+script = ExtResource("1_w8w7q")
+action = ExtResource("5_j2n44")
+success_line = "유리가 류트를 어깨에 멘다. \"어디로 갈까요, 여행자님?\""
+failure_line = "\"당신이 어떤 사람인지 아직 모르겠는걸요.\""
+
+[resource]
+script = ExtResource("6_cic55")
+npc_id = "yuri"
+display_name = "떠돌이 악사 유리"
+sprite = ExtResource("7_1ahxx")
+difficulty = 3
+level = 7
+day_lines = PackedStringArray("동전은 됐어요. 낮의 노래는 원래 값을 안 받거든요.", "세 마을 건너에서 왔어요. 오는 길마다 같은 소문을 듣더군요. 북쪽 길이 막혔다고.")
+night_lines = PackedStringArray("밤이 되면 값을 받아요. 밤의 노래는 잘 팔리니까요.", "등불 아래에서만 들리는 이야기가 있죠. 들어보실래요?")
+pass_actions = Array[ExtResource("1_w8w7q")]([SubResource("Resource_agd46"), SubResource("Resource_i734i"), SubResource("Resource_v2pf2"), SubResource("Resource_g1j2r")])

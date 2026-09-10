@@ -1,0 +1,44 @@
+[gd_resource type="Resource" script_class="NpcData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_pass_action.gd" id="1_pe4tw"]
+[ext_resource type="Resource" path="res://data/pass_action/inquire.tres" id="2_tmb6j"]
+[ext_resource type="Resource" path="res://data/pass_action/challenge.tres" id="3_3u0rf"]
+[ext_resource type="Resource" path="res://data/pass_action/scrutinize.tres" id="4_k3yq3"]
+[ext_resource type="Resource" path="res://data/pass_action/allure.tres" id="5_t31vq"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="6_vkmej"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_b_sheet.png" id="7_unael"]
+
+[sub_resource type="Resource" id="Resource_tiy3f"]
+script = ExtResource("1_pe4tw")
+action = ExtResource("2_tmb6j")
+success_line = "\"창고 열쇠는 관리인만 가지고 있다. 그자가 요즘 술값이 헤퍼졌더군.\""
+failure_line = "보든은 창을 고쳐 쥔다. \"근무 중이다. 물러서라.\""
+
+[sub_resource type="Resource" id="Resource_ardex"]
+script = ExtResource("1_pe4tw")
+action = ExtResource("3_3u0rf")
+success_line = "보든이 창을 내려놓는다. \"좋다, 한 수 겨뤄 보지.\""
+failure_line = "\"Lv.{level}인 나에게 도전한다고? 창을 쥐는 법부터 배우고 오게.\""
+
+[sub_resource type="Resource" id="Resource_iia6b"]
+script = ExtResource("1_pe4tw")
+action = ExtResource("4_k3yq3")
+success_line = "경비병 보든 — Lv.{level} / 경계도 {difficulty}"
+failure_line = "투구 그늘에 가려 표정이 보이지 않는다."
+
+[sub_resource type="Resource" id="Resource_b1u3f"]
+script = ExtResource("1_pe4tw")
+action = ExtResource("5_t31vq")
+success_line = "보든이 투구를 벗는다. \"…한 시간이다. 그 이상은 안 돼.\""
+failure_line = "\"초소를 비울 수는 없다.\" 그는 당신을 신뢰하지 않는다."
+
+[resource]
+script = ExtResource("6_vkmej")
+npc_id = "borden"
+display_name = "경비병 보든"
+sprite = ExtResource("7_unael")
+difficulty = 4
+level = 12
+day_lines = PackedStringArray("이 문 너머는 영주님 관할이다. 볼일이 없으면 물러서라.", "…여행자인가. 하긴, 요즘 이 마을에 오는 자는 여행자뿐이지.")
+night_lines = PackedStringArray("야경은 내 몫이다. 잠은 낮에 자면 돼.", "밤마다 창고 쪽에서 발소리가 난다. 쥐라고 하기엔 발이 두 개더군.")
+pass_actions = Array[ExtResource("1_pe4tw")]([SubResource("Resource_tiy3f"), SubResource("Resource_ardex"), SubResource("Resource_iia6b"), SubResource("Resource_b1u3f")])
