@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=38 format=3]
 
 [ext_resource type="Script" path="res://scripts/field/field.gd" id="1_field"]
 [ext_resource type="Script" path="res://scripts/field/scatter_props.gd" id="2_scatter"]
@@ -18,10 +18,11 @@
 [ext_resource type="Texture2D" path="res://assets/placeholder/lantern.png" id="16_lantern"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/crate.png" id="17_crate"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/signpost.png" id="18_sign"]
-[ext_resource type="Texture2D" path="res://assets/placeholder/char_player.png" id="19_player"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_a.png" id="20_npc_a"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_b.png" id="21_npc_b"]
 [ext_resource type="Shader" path="res://shaders/vignette.gdshader" id="22_vignette"]
+[ext_resource type="Script" path="res://scripts/field/field_camera.gd" id="23_camera"]
+[ext_resource type="PackedScene" path="res://scenes/field/FieldPlayer.tscn" id="24_fieldplayer"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
 shader = ExtResource("22_vignette")
@@ -51,12 +52,24 @@ adjustment_enabled = true
 adjustment_saturation = 1.25
 adjustment_contrast = 1.2
 
+; DOF — Environment이 아니라 CameraAttributesPractical에 있다 (hd2d-visual 참고).
+;
+; near 17.0 → 16.0 (2026-09-10, M1 Stage 2b)
+; 근거: 플레이어가 남쪽 끝(z 4.7, 카메라 z는 19.5로 클램프)에 서면 카메라~플레이어 거리가
+;   머리(y 1.608) 16.57 / 가슴(y 0.804) 16.87 / 발끝 17.16
+; near 17.0에서는 머리가 근블러 램프 안(약 11%)으로 들어가 주인공 상반신이 미세하게 흐려졌다.
+; 16.0으로 내리면 0.57m 여유가 생겨 전 구역에서 완전히 선명하다.
+;
+; 대가: 깊이 13~14.4m 대의 월드 근경(Foreground의 낮은 부시들)이 블러를 25~35% 잃는다.
+; 그래도 괜찮은 이유 — 프레임의 블러는 이제 FieldCamera/CameraFrame(깊이 5~7.6m)이 만든다.
+; 그 깊이대는 near-transition(=12) 아래라 near를 16으로 내려도 최대 블러 그대로다.
+; near를 15 이하로 더 내리면 월드 근경이 선명해져 근경/중경의 구분이 사라진다.
 [sub_resource type="CameraAttributesPractical" id="CameraAttributesPractical_field"]
 dof_blur_far_enabled = true
 dof_blur_far_distance = 28.0
 dof_blur_far_transition = 10.0
 dof_blur_near_enabled = true
-dof_blur_near_distance = 17.0
+dof_blur_near_distance = 16.0
 dof_blur_near_transition = 4.0
 dof_blur_amount = 0.11
 
@@ -115,6 +128,12 @@ uv1_scale = Vector3(2, 1, 1.4)
 roughness = 0.25
 metallic = 0.2
 
+[sub_resource type="BoxShape3D" id="BoxShape3D_bound_ns"]
+size = Vector3(22, 4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bound_ew"]
+size = Vector3(1, 4, 14)
+
 [node name="Field" type="Node3D"]
 script = ExtResource("1_field")
 
@@ -126,6 +145,118 @@ attributes = SubResource("CameraAttributesPractical_field")
 position = Vector3(0, 10, 18)
 rotation_degrees = Vector3(-22, 0, 0)
 fov = 30.0
+script = ExtResource("23_camera")
+target_path = NodePath("../Actors/Player")
+
+; ── 화면 고정 전경 프레임 (CameraFrame) ────────────────────────────────────────
+;
+; 카메라가 추적을 시작하면서 월드에 고정된 전경 프레이밍은 성립하지 않게 됐다.
+; 카메라 x는 ±5, z는 16.0~19.5로 움직이는데 깊이 10m 부근의 화면 가로 반폭은 4.8m뿐이라,
+; 월드 고정 전경은 카메라가 조금만 움직여도 화면을 가로질러 중앙으로 밀려든다.
+; (실측: 기존 FgTreeL은 468개 구도 중 358개에서 플레이어를 가렸고, 서쪽 끝에서는 100% 가렸다.)
+;
+; 그래서 프레임 역할은 카메라의 자식으로 옮겼다. 카메라는 회전하지 않으므로
+; (피치 -22 고정, 요 0) 카메라 로컬 좌표가 화면 좌표와 1:1로 대응한다:
+;   깊이 = -Z,  화면x = X / (깊이 * 0.4763),  화면y = Y / (깊이 * 0.2679)
+;   (fov 30 세로 / 16:9 → tanV 0.2679, tanH 0.4763)
+;
+; 플레이어가 화면에서 지나갈 수 있는 영역을 전 구도(x -10.2~10.2, z -7.2~4.7 —
+; Bounds 벽 안쪽면에서 캡슐 반지름 0.3을 뺀 실제 도달 범위)에 대해 래스터화해 보면
+; **화면 y < -0.72, y > +0.28, |x| > 0.75 는 절대 침범되지 않는다.**
+; 아래 배치는 전부 그 밖에 있다 — 어느 위치에서도 주인공을 가리지 않는다는 뜻이다.
+; 프레임 조각을 옮길 때는 이 세 경계를 넘지 않는지 반드시 다시 계산할 것.
+;
+; 대가: 시차(parallax)가 없다. 그래서 좌우 기둥과 하단 띠만 카메라에 붙이고,
+; 실제로 스쳐 지나가는 근경(Foreground 노드)은 월드에 남겨 뒀다. 둘이 겹쳐 깊이를 만든다.
+[node name="CameraFrame" type="Node3D" parent="FieldCamera"]
+
+; 좌측 기둥 — 잎 덩어리 오른쪽 끝이 화면 x -0.80. 화면 세로를 관통해 무대를 감싼다.
+[node name="FgFrameTreeL" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.095
+position = Vector3(-4.513, -0.138, -7)
+
+; 우측 기둥 — 좌측과 깊이·크기를 어긋나게 잡았다. 완전 대칭이면 화면이 인공적으로 보인다.
+[node name="FgFrameTreeR" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.088
+position = Vector3(4.606, 0.14, -7.6)
+
+; 하단 띠 4개 — 윗변을 -0.78 ~ -0.88로 들쭉날쭉하게 두어 초록 막대로 보이지 않게 한다.
+; 네 개가 화면 가로 -1.0~+1.34를 이어 덮으므로 어느 구도에서도 바닥이 비지 않는다.
+[node name="FgFrameBandL" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.1
+position = Vector3(-1.361, -2.219, -6.4)
+
+[node name="FgFrameBandC" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("14_tuft")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.16
+position = Vector3(-0.371, -2.126, -5.6)
+
+[node name="FgFrameBandR" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.095
+position = Vector3(0.697, -2.341, -7)
+
+[node name="FgFrameBandE" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.11
+position = Vector3(2.236, -2.188, -6)
+
+; 상단에서 늘어지는 잎 — 화면 y > +0.28 은 플레이어가 절대 닿지 않는 영역이라 통째로 쓸 수 있다.
+; 하단 띠만으로는 프레임이 화면 아래 10%에 그쳐 감싸는 느낌이 약했다.
+; 좌우 코너에서만 늘어뜨리고 상단 중앙(x -0.42~+0.46)은 비워 뒀다 —
+; 다 덮으면 커튼처럼 보이고 배경 숲이 지워진다.
+[node name="FgFrameLeafTL" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.115
+position = Vector3(-2.786, 1.707, -6.6)
+
+[node name="FgFrameLeafTR" type="Sprite3D" parent="FieldCamera/CameraFrame"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.1
+position = Vector3(2.86, 1.739, -7.2)
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 rotation_degrees = Vector3(-40, -38, 0)
@@ -138,6 +269,7 @@ shadow_enabled = true
 [node name="Ground" type="CSGBox3D" parent="Terrain"]
 size = Vector3(90, 0.5, 90)
 position = Vector3(0, -0.25, 0)
+use_collision = true
 material = SubResource("Mat_ground")
 
 [node name="PathMain" type="CSGBox3D" parent="Terrain"]
@@ -158,6 +290,7 @@ material = SubResource("Mat_water")
 [node name="Terrace" type="CSGBox3D" parent="Terrain"]
 size = Vector3(78, 3, 12)
 position = Vector3(0, 1.5, -14)
+use_collision = true
 material = SubResource("Mat_terrace")
 
 [node name="TerraceTop" type="CSGBox3D" parent="Terrain"]
@@ -168,6 +301,7 @@ material = SubResource("Mat_ground")
 [node name="Cliff" type="CSGBox3D" parent="Terrain"]
 size = Vector3(96, 18, 5)
 position = Vector3(0, 9, -23)
+use_collision = true
 material = SubResource("Mat_cliff")
 
 [node name="DirtPatchA" type="CSGBox3D" parent="Terrain"]
@@ -185,6 +319,7 @@ material = SubResource("Mat_dirt")
 [node name="InnWall" type="CSGBox3D" parent="Buildings"]
 size = Vector3(5.4, 3.7, 4.2)
 position = Vector3(-5.4, 1.85, -4.8)
+use_collision = true
 material = SubResource("Mat_wood")
 
 [node name="InnRoof" type="CSGBox3D" parent="Buildings"]
@@ -195,6 +330,7 @@ material = SubResource("Mat_roof")
 [node name="ShopWall" type="CSGBox3D" parent="Buildings"]
 size = Vector3(4.2, 3.1, 3.6)
 position = Vector3(6, 1.55, -4.6)
+use_collision = true
 material = SubResource("Mat_stone")
 
 [node name="ShopRoof" type="CSGBox3D" parent="Buildings"]
@@ -222,6 +358,35 @@ size = Vector3(0.75, 0.95, 0.12)
 position = Vector3(6.85, 1.85, -2.76)
 material = SubResource("Mat_window_lit")
 
+[node name="Bounds" type="StaticBody3D" parent="."]
+
+[node name="North" type="CollisionShape3D" parent="Bounds"]
+shape = SubResource("BoxShape3D_bound_ns")
+position = Vector3(0, 2, -8)
+
+[node name="South" type="CollisionShape3D" parent="Bounds"]
+shape = SubResource("BoxShape3D_bound_ns")
+position = Vector3(0, 2, 5.5)
+
+[node name="West" type="CollisionShape3D" parent="Bounds"]
+shape = SubResource("BoxShape3D_bound_ew")
+position = Vector3(-10.5, 2, -1.25)
+
+[node name="East" type="CollisionShape3D" parent="Bounds"]
+shape = SubResource("BoxShape3D_bound_ew")
+position = Vector3(10.5, 2, -1.25)
+
+; ── 중경 나무 (Trees) ────────────────────────────────────────────────────────
+;
+; 카메라 추적을 붙이고 나서 보니 전경뿐 아니라 **중경 나무도 주인공을 삼켰다.**
+; 정밀 검사(겹치는 화면 행에서 깊이를 비교, 2132개 구도) 결과:
+;   T5(x -10, z -2.5) 최악 91%,  T7(x -9.8, z 3.8) 96%,  T8 75%,  T4 65%
+; 원인은 전경과 같다 — 카메라 x가 ±5 움직이면 x ±10의 나무가 플레이어 화면 열로 들어온다.
+;
+; 두 가지 안전 조건 중 하나를 만족하도록 옮겼다:
+;   (a) z <= -7.4 — 플레이어가 닿는 북단(z -7.2)보다 뒤라 항상 플레이어가 앞에 그려진다.
+;   (b) |x| >= 11.9 — 카메라가 끝까지 밀려도 플레이어 화면 열 밖에 머문다.
+; T2(z -7.6)·T6(z -7.4)는 이미 (a)를 만족해 그대로 뒀다.
 [node name="Trees" type="Node3D" parent="."]
 
 [node name="T1" type="Sprite3D" parent="Trees"]
@@ -231,7 +396,7 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 pixel_size = 0.105
-position = Vector3(-8.5, 2.52, -6.5)
+position = Vector3(-8.5, 2.52, -7.5)
 
 [node name="T2" type="Sprite3D" parent="Trees"]
 texture = ExtResource("10_tree")
@@ -249,7 +414,7 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 pixel_size = 0.105
-position = Vector3(8.2, 2.52, -7)
+position = Vector3(8.2, 2.52, -7.5)
 
 [node name="T4" type="Sprite3D" parent="Trees"]
 texture = ExtResource("10_tree")
@@ -258,7 +423,7 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 pixel_size = 0.105
-position = Vector3(10, 2.52, -5)
+position = Vector3(12, 2.52, -5)
 
 [node name="T5" type="Sprite3D" parent="Trees"]
 texture = ExtResource("10_tree")
@@ -267,7 +432,7 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 pixel_size = 0.105
-position = Vector3(-10, 2.52, -2.5)
+position = Vector3(-12, 2.52, -2.5)
 
 [node name="T6" type="Sprite3D" parent="Trees"]
 texture = ExtResource("10_tree")
@@ -285,7 +450,7 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 pixel_size = 0.078
-position = Vector3(-9.8, 1.87, 3.8)
+position = Vector3(-11.9, 1.87, 3.8)
 
 [node name="T8" type="Sprite3D" parent="Trees"]
 texture = ExtResource("10_tree")
@@ -294,7 +459,25 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 pixel_size = 0.072
-position = Vector3(10.2, 1.73, 2.2)
+position = Vector3(11.9, 1.73, 2.2)
+
+[node name="T9" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.105
+position = Vector3(-10.9, 2.52, -7.5)
+
+[node name="T10" type="Sprite3D" parent="Trees"]
+texture = ExtResource("10_tree")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.105
+position = Vector3(10.9, 2.52, -7.6)
 
 [node name="Props" type="Node3D" parent="."]
 
@@ -581,10 +764,22 @@ tuft_texture = ExtResource("14_tuft")
 flower_texture = ExtResource("15_flower")
 tuft_count = 170
 flower_count = 46
-area_size = Vector2(34, 26)
-area_center = Vector2(0, -1)
 area_size = Vector2(30, 18)
+area_center = Vector2(0, -1)
 
+; ── 월드 고정 근경 (Foreground) ──────────────────────────────────────────────
+;
+; 프레임 역할은 FieldCamera/CameraFrame 이 맡는다. 여기 남은 것들은 **시차 담당**이다 —
+; 카메라가 움직일 때 실제로 스쳐 지나가야 화면이 종이처럼 보이지 않는다.
+;
+; 배치 규칙 (전 구도 468개를 격자로 검사해 확정):
+;   · z 7~7.8 (플레이 영역 남단 z 5.0 바깥)에 두되 높이는 1.6m 이하.
+;     이 깊이대에서 플레이어가 남쪽 끝(z 4.7)에 섰을 때 발끝이 화면 y -0.685까지 내려오므로,
+;     그보다 아래에 머무르려면 z 7.0에서 1.20m / z 7.8에서 1.71m가 한계다.
+;   · 큰 나무는 |x| >= 12.4 밖으로만. 카메라 x가 -5까지 밀리면 x -6.4의 나무는
+;     화면 -0.57~+0.17을 덮어 주인공을 통째로 삼킨다(수정 전 상태가 바로 이것).
+;     x -12.7이면 카메라가 서쪽 끝에 붙었을 때만 화면 좌단에 잎 끝이 걸린다 —
+;     "지도 끝에 왔다"는 신호가 돼서 오히려 낫다.
 [node name="Foreground" type="Node3D" parent="."]
 
 [node name="FgTreeL" type="Sprite3D" parent="Foreground"]
@@ -595,7 +790,7 @@ alpha_cut = 1
 shaded = true
 cast_shadow = 0
 pixel_size = 0.185
-position = Vector3(-6.4, 4.44, 6)
+position = Vector3(-12.7, 4.44, 7.4)
 
 [node name="FgTreeR" type="Sprite3D" parent="Foreground"]
 texture = ExtResource("10_tree")
@@ -605,7 +800,7 @@ alpha_cut = 1
 shaded = true
 cast_shadow = 0
 pixel_size = 0.17
-position = Vector3(6.6, 4.08, 5.6)
+position = Vector3(12.7, 4.08, 6.8)
 
 [node name="FgBushA" type="Sprite3D" parent="Foreground"]
 texture = ExtResource("11_bush")
@@ -614,8 +809,8 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 cast_shadow = 0
-pixel_size = 0.155
-position = Vector3(-3, 1.55, 7)
+pixel_size = 0.07
+position = Vector3(-6.2, 0.7, 7.4)
 
 [node name="FgBushB" type="Sprite3D" parent="Foreground"]
 texture = ExtResource("11_bush")
@@ -624,8 +819,18 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 cast_shadow = 0
-pixel_size = 0.17
-position = Vector3(2.9, 1.7, 7.2)
+pixel_size = 0.075
+position = Vector3(3.1, 0.75, 7.6)
+
+[node name="FgBushC" type="Sprite3D" parent="Foreground"]
+texture = ExtResource("11_bush")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.058
+position = Vector3(-9.4, 0.58, 7)
 
 [node name="FgTuftA" type="Sprite3D" parent="Foreground"]
 texture = ExtResource("14_tuft")
@@ -634,8 +839,8 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 cast_shadow = 0
-pixel_size = 0.19
-position = Vector3(-0.6, 1.14, 7.6)
+pixel_size = 0.13
+position = Vector3(-1.4, 0.78, 7.8)
 
 [node name="FgTuftB" type="Sprite3D" parent="Foreground"]
 texture = ExtResource("14_tuft")
@@ -644,8 +849,18 @@ texture_filter = 0
 alpha_cut = 1
 shaded = true
 cast_shadow = 0
-pixel_size = 0.165
-position = Vector3(4.3, 0.99, 7.3)
+pixel_size = 0.115
+position = Vector3(6.4, 0.69, 7.2)
+
+[node name="FgTuftC" type="Sprite3D" parent="Foreground"]
+texture = ExtResource("14_tuft")
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+cast_shadow = 0
+pixel_size = 0.12
+position = Vector3(9, 0.72, 7.7)
 
 [node name="ForestScatter" type="Node3D" parent="."]
 script = ExtResource("2_scatter")
@@ -662,14 +877,9 @@ scatter_seed = 991133
 
 [node name="Actors" type="Node3D" parent="."]
 
-[node name="Player" type="Sprite3D" parent="Actors"]
-texture = ExtResource("19_player")
-billboard = 2
-texture_filter = 0
-alpha_cut = 1
-shaded = true
-pixel_size = 0.067
-position = Vector3(0, 0.8, 0.6)
+[node name="Player" parent="Actors" instance=ExtResource("24_fieldplayer")]
+position = Vector3(0, 0, 0.6)
+camera_path = NodePath("../../FieldCamera")
 
 [node name="NpcA" type="Sprite3D" parent="Actors"]
 texture = ExtResource("20_npc_a")
