@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="NpcData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_pass_action.gd" id="1_3boc3"]
+[ext_resource type="Resource" path="res://data/pass_action/scrutinize.tres" id="2_lkrng"]
+[ext_resource type="Resource" path="res://data/pass_action/allure.tres" id="3_kwh8y"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="4_fp1hx"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_f_sheet.png" id="5_05ofr"]
+
+[sub_resource type="Resource" id="Resource_4pvs4"]
+script = ExtResource("1_3boc3")
+action = ExtResource("2_lkrng")
+success_line = "집정관 호위 오를렉 — Lv.{level} / 경계도 {difficulty}
+갑주 안쪽에 봉인된 명령서가 접혀 있다."
+failure_line = "오를렉이 이쪽을 먼저 본다. 시선이 닿기도 전에 막힌다."
+
+[sub_resource type="Resource" id="Resource_xgsfa"]
+script = ExtResource("1_3boc3")
+action = ExtResource("3_kwh8y")
+success_line = "오를렉이 투구를 벗는다. \"교대까지 두 시간이다.\""
+failure_line = "\"근무 중이다.\""
+override_required_flag = "pa_scrutinize_{npc}"
+
+[resource]
+script = ExtResource("4_fp1hx")
+npc_id = "orlek"
+display_name = "집정관 호위 오를렉"
+sprite = ExtResource("5_05ofr")
+difficulty = 5
+level = 15
+day_lines = PackedStringArray("계단 위는 시청 관할이다. 볼일이 없으면 내려가라.", "낮에는 줄을 서라. 밤에는 오지 마라.")
+night_lines = PackedStringArray("아치 안쪽은 집정관의 구역이다. 여기까지다.", "광장에 무슨 이야기가 도는지 나는 듣지 않는다. 듣는 사람은 따로 있다.")
+pass_actions = Array[ExtResource("1_3boc3")]([SubResource("Resource_4pvs4"), SubResource("Resource_xgsfa")])

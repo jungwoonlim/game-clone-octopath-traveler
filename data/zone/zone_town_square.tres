@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ZoneData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/zone_data.gd" id="1_ef7jt"]
+
+[resource]
+script = ExtResource("1_ef7jt")
+zone_id = "town_square"
+display_name = "집정관 광장"
+phase_policy = 2
+phase_locked_notice = "{zone}의 등은 밤에만 켠다. 여기서 시간을 돌릴 수는 없다."

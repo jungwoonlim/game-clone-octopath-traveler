@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="NpcData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_pass_action.gd" id="1_w4qvm"]
+[ext_resource type="Resource" path="res://data/pass_action/scrutinize.tres" id="2_rmthc"]
+[ext_resource type="Resource" path="res://data/pass_action/allure.tres" id="3_m13ke"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="4_ajdy1"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_d_sheet.png" id="5_l4jnq"]
+
+[sub_resource type="Resource" id="Resource_6htit"]
+script = ExtResource("1_w4qvm")
+action = ExtResource("2_rmthc")
+success_line = "등불지기 하델 — Lv.{level} / 경계도 {difficulty}
+허리춤 열쇠꾸러미에 시청 문장이 섞여 있다."
+
+[sub_resource type="Resource" id="Resource_l1ilm"]
+script = ExtResource("1_w4qvm")
+action = ExtResource("3_m13ke")
+success_line = "하델이 등대를 어깨에 건다. \"어차피 북쪽 열 개는 꺼져 있으니까요.\""
+failure_line = "\"당신이 어느 쪽 사람인지부터 봅시다.\""
+override_required_flag = "pa_scrutinize_{npc}"
+
+[resource]
+script = ExtResource("4_ajdy1")
+npc_id = "hadel"
+display_name = "등불지기 하델"
+sprite = ExtResource("5_l4jnq")
+difficulty = 2
+level = 5
+day_lines = PackedStringArray("낮의 광장은 그냥 돌바닥입니다. 볼 게 없어요.", "해가 지고 오세요. 등이 켜져야 이 도시가 시작되거든요.")
+night_lines = PackedStringArray("이 광장에만 등이 스물셋입니다. 순서대로 켜야 기름이 남아요.", "북쪽 열 개는 오늘 켜지 말라더군요. 시청에서 그러라니 그러는 거죠.", "누가 어둠을 사 갔는지는 등지기가 제일 먼저 압니다.")
+pass_actions = Array[ExtResource("1_w4qvm")]([SubResource("Resource_6htit"), SubResource("Resource_l1ilm")])

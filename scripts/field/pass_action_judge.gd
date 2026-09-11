@@ -64,7 +64,11 @@ static func evaluate(npc: NpcData, entry: NpcPassAction, state: Node) -> bool:
 		PassActionData.JudgeKind.GOLD:
 			return state.gold >= action.gold_cost
 		PassActionData.JudgeKind.FLAG:
-			return state.has_flag(PassActionData.format_flag(action.required_flag, npc.npc_id))
+			# 선행 플래그는 액션이 아니라 **엔트리**에게 묻는다(M2 설계 §3-2).
+			# 엔트리가 override_required_flag를 비워 두면 action.required_flag로 폴백하므로
+			# M1 데이터의 동작은 그대로다. 여기서 action.required_flag를 직접 읽으면
+			# 밤 고정 구역의 유혹이 조용히 영구 실패한다 — 에러는 나지 않는다.
+			return state.has_flag(PassActionData.format_flag(entry.resolve_required_flag(), npc.npc_id))
 		PassActionData.JudgeKind.LEVEL:
 			return npc.level <= action.level_limit
 	return false

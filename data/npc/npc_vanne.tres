@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="NpcData" format=3]
+
+[ext_resource type="Script" path="res://scripts/data/npc_pass_action.gd" id="1_gkvlk"]
+[ext_resource type="Resource" path="res://data/pass_action/scrutinize.tres" id="2_dgk4u"]
+[ext_resource type="Resource" path="res://data/pass_action/allure.tres" id="3_qyrwk"]
+[ext_resource type="Script" path="res://scripts/data/npc_data.gd" id="4_w4865"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_e_sheet.png" id="5_r1j5g"]
+
+[sub_resource type="Resource" id="Resource_k5ok2"]
+script = ExtResource("1_gkvlk")
+action = ExtResource("2_dgk4u")
+success_line = "전표상 반느 — Lv.{level} / 경계도 {difficulty}
+소맷단에 지워 낸 서명이 세 개 남아 있다."
+
+[sub_resource type="Resource" id="Resource_jntvy"]
+script = ExtResource("1_gkvlk")
+action = ExtResource("3_qyrwk")
+success_line = "반느가 장부를 접는다. \"동행도 일종의 계약이지요.\""
+failure_line = "\"거래는 서로를 확인한 다음입니다.\""
+override_required_flag = "pa_scrutinize_{npc}"
+
+[resource]
+script = ExtResource("4_w4865")
+npc_id = "vanne"
+display_name = "전표상 반느"
+sprite = ExtResource("5_r1j5g")
+difficulty = 3
+level = 6
+day_lines = PackedStringArray("낮에는 시청 창구에 앉아 있습니다. 여기선 아무것도 안 팔아요.", "표가 필요하면 밤에 오세요. 밤값이 더 쌉니다.")
+night_lines = PackedStringArray("통행 전표, 숙박 전표, 이름 없는 전표. 무엇을 찾으십니까.", "이 도시에서는 이름보다 서명이 먼저입니다.", "값은 아직 동전으로 받지 않습니다. 아직은요.")
+pass_actions = Array[ExtResource("1_gkvlk")]([SubResource("Resource_k5ok2"), SubResource("Resource_jntvy")])
