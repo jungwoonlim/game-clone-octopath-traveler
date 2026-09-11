@@ -13,7 +13,8 @@ extends SceneTree
 ## "가만히 서 있는 화면"뿐이었다.
 ##
 ## 타임라인 문법 — `;`로 단계를 잇는다:
-##   wait:<프레임>              그냥 기다린다
+##   wait:<프레임>              프레임을 센다 (물리·입력 처리를 흘려보낼 때)
+##   sleep:<초>                 벽시계로 기다린다 (**연출과 동기화할 때는 반드시 이것**)
 ##   hold:<액션>:<프레임>        액션을 누른 채 그만큼 기다렸다 뗀다 (이동용)
 ##   press:<액션>               한 번 눌렀다 뗀다 (상호작용·메뉴 확정용)
 ##   night                      밤으로 전환한다 (타임라인 중간에 바꿀 때)
@@ -43,6 +44,12 @@ const DEFAULT_FRAMES := 45
 # press 한 번이 차지하는 프레임. 1프레임이면 `_unhandled_input`이 뗌을 못 볼 수 있어 여유를 둔다.
 const PRESS_FRAMES := 3
 
+# pose로 순간이동한 뒤 Area3D 겹침이 갱신되기를 기다리는 물리 프레임 수.
+const POSE_SETTLE_PHYSICS_FRAMES := 2
+
+# 그리기 한 번을 기다리는 상한. 120fps 기준 약 2초로, 정상이면 1프레임 만에 온다.
+const DRAW_WAIT_FRAMES := 240
+
 
 func _init() -> void:
 	_run.call_deferred()
@@ -52,6 +59,12 @@ func _run() -> void:
 	var scene_path := _arg("scene", DEFAULT_SCENE)
 	var out_path := _arg("out", DEFAULT_OUT)
 	var frames := int(_arg("frames", str(DEFAULT_FRAMES)))
+
+	# 창을 항상 위로 올린다. 가려진 창은 macOS가 그리기를 멈춰서 `frame_post_draw`가
+	# 영영 오지 않고, 그 상태로 캡처가 매달린다(측정: 10회 중 4회). 게임 루프는 계속 돌기 때문에
+	# 로그만 봐서는 살아 있는지 알 수 없어 진단이 특히 어렵다.
+	# 캡처는 몇 초 만에 끝나므로 그동안 창이 위에 떠 있는 비용은 작다.
+	DisplayServer.window_set_flag(DisplayServer.WINDOW_FLAG_ALWAYS_ON_TOP, true)
 
 	var err := change_scene_to_file(scene_path)
 	if err != OK:
@@ -75,6 +88,13 @@ func _run() -> void:
 		if not _apply_pose(pose):
 			quit(1)
 			return
+		# **물리 프레임을 기다려야 한다.** 순간이동으로 옮긴 Area3D의 겹침은 물리 스텝이
+		# 한 번 돌아야 갱신되고, 진입 시그널도 그때 발화한다. process_frame만 기다리면
+		# 상호작용 후보가 아직 비어 있어서 바로 뒤의 press:interact가 통째로 무시된다.
+		# 그러면 "대화가 시작되지 않은 화면"이 정상 캡처로 넘어가 기능 고장으로 오판하게 된다.
+		# 2회 기다리는 이유: 1회는 겹침 갱신, 2회는 그 시그널을 받은 쪽이 상태를 세우는 프레임.
+		for _i in POSE_SETTLE_PHYSICS_FRAMES:
+			await physics_frame
 		await process_frame
 
 	# 조작이 필요한 화면(이동·대화·메뉴)은 여기서 입력을 재생한 뒤 찍는다.
@@ -89,7 +109,15 @@ func _run() -> void:
 	# 성능은 워밍업을 거치는 tools/measure_fps.gd로 잰다.
 
 	# 렌더가 실제로 끝난 뒤에 뷰포트를 읽어야 한다.
-	await RenderingServer.frame_post_draw
+	# **다만 무한정 기다리면 안 된다.** 게임 루프가 120fps로 멀쩡히 도는데도 이 신호만
+	# 오지 않아 캡처가 통째로 매달린 적이 16회 중 6회다(창이 가려지면 그리기가 멈춘다).
+	# 매달린 캡처를 3분간 기다리는 것보다 빨리 실패하고 다시 찍는 쪽이 훨씬 싸다.
+	if not await _await_draw():
+		printerr("CAPTURE FAIL: frame_post_draw가 %d프레임 안에 오지 않았다." % DRAW_WAIT_FRAMES)
+		printerr("  게임 루프는 돌고 있으나 그리기가 멈춘 상태다 — 창이 다른 창에 가려졌거나")
+		printerr("  최소화됐을 때 발생한다. 같은 명령을 다시 실행하면 대개 성공한다.")
+		quit(1)
+		return
 
 	var img := root.get_texture().get_image()
 	if img == null or img.is_empty():
@@ -106,6 +134,28 @@ func _run() -> void:
 
 	print("CAPTURE OK: ", ProjectSettings.globalize_path(out_path))
 	quit(0)
+
+
+## 그리기가 한 번 끝나기를 기다린다. 제한 프레임 안에 오지 않으면 false.
+##
+## `await RenderingServer.frame_post_draw`를 그냥 쓰면 신호가 오지 않을 때 영원히 멈춘다.
+## 여기서는 신호를 일회성으로 연결해 두고 `process_frame`으로 프레임을 세면서 감시한다.
+## 게임 루프(`process_frame`)는 그리기가 멈춰도 계속 돌기 때문에 이 방식이 성립한다.
+func _await_draw() -> bool:
+	# 배열로 감싸는 이유: 람다가 값을 바깥으로 돌려주려면 참조 타입이어야 한다.
+	var drawn := [false]
+	var on_draw := func() -> void:
+		drawn[0] = true
+	RenderingServer.frame_post_draw.connect(on_draw, CONNECT_ONE_SHOT)
+
+	for _i in DRAW_WAIT_FRAMES:
+		await process_frame
+		if drawn[0]:
+			return true
+
+	if RenderingServer.frame_post_draw.is_connected(on_draw):
+		RenderingServer.frame_post_draw.disconnect(on_draw)
+	return false
 
 
 ## 플레이어를 지정 좌표에 세우고 카메라를 즉시 그 구도로 옮긴다. 실패하면 false.
@@ -162,6 +212,9 @@ func _play_actions(timeline: String) -> bool:
 			"wait":
 				if not await _step_wait(parts):
 					return false
+			"sleep":
+				if not await _step_sleep(parts):
+					return false
 			"hold":
 				if not await _step_hold(parts):
 					return false
@@ -184,6 +237,24 @@ func _step_wait(parts: PackedStringArray) -> bool:
 		return false
 	for i in int(parts[1]):
 		await process_frame
+	return true
+
+
+## 벽시계 기준으로 기다린다. **연출과 동기화할 때는 wait가 아니라 이것을 쓴다.**
+##
+## `wait:<프레임>`은 프레임을 세므로 창 모드 fps(72~120으로 흔들린다)에 따라 실제 시간이 변한다.
+## 타이핑 연출처럼 초당 글자수로 도는 것과는 어긋날 수밖에 없고, 어긋나면 아직 진행 중인 화면이
+## "정상 캡처"로 저장된다. 실제로 `wait:150`을 준 타임라인이 패스 액션 목록이 뜨지 않은 화면을
+## ✓ PASS로 저장했고, 그걸 제품 버그로 의심해 한참을 뒤졌다.
+func _step_sleep(parts: PackedStringArray) -> bool:
+	if parts.size() != 2:
+		printerr("CAPTURE FAIL: sleep 문법은 sleep:<초> — ", ":".join(parts))
+		return false
+	var secs := float(parts[1])
+	if secs <= 0.0:
+		printerr("CAPTURE FAIL: sleep은 0보다 커야 한다 — ", ":".join(parts))
+		return false
+	await create_timer(secs).timeout
 	return true
 
 

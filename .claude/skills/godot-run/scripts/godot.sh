@@ -18,6 +18,12 @@
 set -uo pipefail
 
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
+
+# shot이 이 시간(초)을 넘기면 끊는다. 정상 캡처는 입력 타임라인을 길게 줘도 1분 안에 끝난다.
+SHOT_TIMEOUT="${SHOT_TIMEOUT:-180}"
+
+# 그리기가 멈춰 실패했을 때의 총 시도 횟수 (환경 문제라 다시 찍으면 대개 성공한다).
+SHOT_RETRIES="${SHOT_RETRIES:-3}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../../../.." && pwd)}"
 
@@ -193,19 +199,47 @@ cmd_run() {
 	"$GODOT" --path "$PROJECT_ROOT" --resolution 1280x720 --quit-after "$frames" 2>&1 | strip_noise | tail -20
 }
 
-cmd_shot() {
-	local out="${1:-_screenshots/shot.png}"
-	local night="${2:-false}"
-	local actions="${3:-}"
-	local pose="${4:-}"
-	local scene="${5:-res://scenes/main/Main.tscn}"
-	echo "▶ 스크린샷 캡처 → $out (밤: $night${pose:+, 위치: $pose}${actions:+, 입력: $actions})"
+# 캡처 1회. 종료 코드: 0 = 성공, 1 = 실패, 2 = 그리기가 멈춤(재시도할 가치가 있음)
+_shot_once() {
+	local out="$1" night="$2" actions="$3" pose="$4" scene="$5"
+
+	# 출력을 변수에 담아 두면 끝날 때까지 아무것도 보이지 않는다.
+	# 실제로 같은 캡처가 진행 표시 없이 35분간 매달린 적이 있고, 살아 있는지조차 알 수 없었다.
+	# 그래서 (1) 로그를 파일로 받아 새 줄이 생길 때마다 흘려 보여 주고,
+	#        (2) SHOT_TIMEOUT을 넘기면 끊는다 — 매달린 캡처를 기다리는 시간이 가장 비싸다.
+	local raw
+	raw="$(mktemp "${TMPDIR:-/tmp}/godot_shot.XXXXXX")"
+
 	# 헤드리스는 dummy 렌더러라 빈 이미지가 나온다. 창 모드로 실행하되 사용자 개입 없이 끝난다.
-	local log
-	log="$("$GODOT" --path "$PROJECT_ROOT" --resolution 1280x720 \
+	"$GODOT" --path "$PROJECT_ROOT" --resolution 1280x720 \
 		--script res://tools/capture_screenshot.gd \
 		-- "--scene=$scene" "--out=res://$out" "--night=$night" \
-		"--actions=$actions" "--pose=$pose" 2>&1 | strip_noise)"
+		"--actions=$actions" "--pose=$pose" >"$raw" 2>&1 &
+	local godot_pid=$!
+
+	local shown=0 waited=0 total
+	while kill -0 "$godot_pid" 2>/dev/null; do
+		total="$(wc -l <"$raw" | tr -d ' ')"
+		if [ "$total" -gt "$shown" ]; then
+			sed -n "$((shown + 1)),${total}p" "$raw" | strip_noise | sed 's/^/    /'
+			shown="$total"
+		fi
+		sleep 1
+		waited=$((waited + 1))
+		if [ "$waited" -ge "$SHOT_TIMEOUT" ]; then
+			kill -9 "$godot_pid" 2>/dev/null
+			wait "$godot_pid" 2>/dev/null
+			echo "✗ FAIL — shot (${SHOT_TIMEOUT}초를 넘겨 중단했다)"
+			strip_noise <"$raw" | tail -10 | sed 's/^/    /'
+			rm -f "$raw"
+			return 1
+		fi
+	done
+	wait "$godot_pid" 2>/dev/null
+
+	local log
+	log="$(strip_noise <"$raw")"
+	rm -f "$raw"
 
 	if printf '%s\n' "$log" | grep -q "CAPTURE OK"; then
 		# 캡처가 성공해도 스크립트가 죽어 있으면 화면 일부가 통째로 비어 있다.
@@ -220,9 +254,42 @@ cmd_shot() {
 		printf '%s\n' "$log" | grep "CAPTURE OK" | sed 's/^/    /'
 		return 0
 	fi
+
+	# 창이 가려져 그리기가 멈춘 경우는 코드 문제가 아니라 환경 문제다. 재시도로 구분한다.
+	if printf '%s\n' "$log" | grep -q "frame_post_draw가"; then
+		printf '%s\n' "$log" | grep -A 2 "frame_post_draw가" | head -3 | sed 's/^/    /'
+		return 2
+	fi
+
 	echo "✗ FAIL — shot"
 	printf '%s\n' "$log" | grep -E "CAPTURE FAIL|$ERROR_PATTERN" | head -10 | sed 's/^/    /'
 	return 1
+}
+
+cmd_shot() {
+	local out="${1:-_screenshots/shot.png}"
+	local night="${2:-false}"
+	local actions="${3:-}"
+	local pose="${4:-}"
+	local scene="${5:-res://scenes/main/Main.tscn}"
+	echo "▶ 스크린샷 캡처 → $out (밤: $night${pose:+, 위치: $pose}${actions:+, 입력: $actions})"
+
+	# 그리기가 멈추는 일이 16회 중 6회로 드물지 않다. 사람이나 에이전트가 같은 명령을
+	# 다시 치게 만들 이유가 없으므로 여기서 자동으로 다시 찍는다.
+	# **재시도는 그리기 실패에만 적용한다** — 진짜 에러를 재시도로 덮으면 원인이 가려진다.
+	local attempt=1 rc
+	while true; do
+		_shot_once "$out" "$night" "$actions" "$pose" "$scene"
+		rc=$?
+		[ "$rc" -ne 2 ] && return "$rc"
+		if [ "$attempt" -ge "$SHOT_RETRIES" ]; then
+			echo "✗ FAIL — shot (그리기가 ${SHOT_RETRIES}회 연속으로 멈췄다)"
+			echo "    창이 다른 창에 계속 가려져 있을 수 있습니다. 창을 앞으로 꺼내고 다시 시도하세요."
+			return 1
+		fi
+		attempt=$((attempt + 1))
+		echo "  ↻ 그리기가 멈췄다 — 다시 찍는다 (${attempt}/${SHOT_RETRIES})"
+	done
 }
 
 cmd_bench() {

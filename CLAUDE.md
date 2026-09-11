@@ -41,3 +41,9 @@ Godot 4.7로 만드는 옥토패스 트래블러 2 스타일 HD-2D JRPG 프로�
 | 2026-09-10 | 스크린샷에 입력 타임라인 추가 | tools/capture_screenshot.gd, skills/godot-run | 정지 화면만 찍을 수 있어 이동·대화창·메뉴는 검증할 수단이 아예 없었음 |
 | 2026-09-10 | 스크린샷에 `pose` 모드 추가 | tools/capture_screenshot.gd, skills/godot-run | 창 모드 fps가 흔들려 `hold:N프레임`의 이동량이 매번 달라짐. 중앙에 선 화면을 "서쪽 끝"으로 오독할 뻔했음 |
 | 2026-09-10 | 전경 프레이밍을 카메라 자식으로 이동 | scenes/field/Field.tscn | 추적 카메라가 x로 ±5 움직이면 월드 고정 전경이 화면 중앙으로 밀려들어 플레이어를 가림 (기하학적으로 양립 불가) |
+| 2026-09-11 | `pose` 직후 물리 프레임 대기 | tools/capture_screenshot.gd | Area3D 겹침이 물리 스텝 전이라 바로 뒤의 `press:interact`가 항상 삼켜졌고, "대화가 안 열린 화면"이 정상 캡처로 저장됐음 |
+| 2026-09-11 | `shot` 출력 실시간 표시 + 3분 타임아웃 | skills/godot-run/scripts/godot.sh | 출력을 변수에 담아 끝날 때까지 아무것도 안 보였고, 살아 있는지 모른 채 35분을 기다린 적이 있음 |
+| 2026-09-11 | 스크린샷 최근접 확대 도구 추가 | tools/crop_zoom.gd, skills/godot-run | 640×360 원본으로는 폰트 안티에일리어싱 판단이 불가능하고, 부드러운 보간으로 키우면 AA 유무가 똑같이 뿌예져 비교가 성립하지 않음 |
+| 2026-09-11 | UI 폰트 안티에일리어싱 끔 (한글 하한 12px) | scenes/ui/*.tscn | 640×360을 2배 확대하는 구조라 글자 경계의 회색 픽셀 1개가 화면에서 2×2 덩어리가 되어 도트 배경 위에 혼자 뿌옇게 뜸 |
+| 2026-09-11 | 캡처 창을 항상 위로 + 그리기 감시·자동 재시도 | tools/capture_screenshot.gd, skills/godot-run | macOS는 가려진 창의 그리기를 멈추는데 게임 루프는 120fps로 계속 돌아, 로그만으로는 살아 있는지 알 수 없는 채 매달림 (실패 10회 중 4회 → 20회 중 0회) |
+| 2026-09-11 | 타임라인에 `sleep:<초>` 추가 | tools/capture_screenshot.gd, skills/godot-run | 연출은 벽시계로 도는데 `wait:`는 프레임을 세서, 목록이 안 뜬 화면이 `✓ PASS`로 저장되고 제품 버그로 오인됨 |
