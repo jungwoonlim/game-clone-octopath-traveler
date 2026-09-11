@@ -1,0 +1,52 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/field/field_npc.gd" id="1_npc"]
+[ext_resource type="Texture2D" path="res://assets/placeholder/interact_marker.png" id="2_marker"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
+radius = 0.3
+height = 1.4
+
+; 상호작용 감지용. 플레이어 쪽 Area3D(반경 1.2m)와 이 구가 닿으면 후보가 된다.
+; 설계 §2-1의 "반경 1.2m"는 플레이어 쪽 값이고, 여기 0.4를 더해 실효 사거리가 약 1.6m가 된다.
+[sub_resource type="SphereShape3D" id="SphereShape3D_zone"]
+radius = 0.4
+
+[node name="FieldNpc" type="StaticBody3D"]
+script = ExtResource("1_npc")
+
+; hframes/vframes는 char_*_sheet.png(4열 × 4행)와 짝이다. 한쪽만 바꾸면 엉뚱한 칸이 나온다.
+; 단일 프레임 텍스처를 npc_data.sprite에 꽂으면 1/16만 보이므로 시트를 쓸 것.
+[node name="Sprite3D" type="Sprite3D" parent="."]
+hframes = 4
+vframes = 4
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+shaded = true
+pixel_size = 0.067
+position = Vector3(0, 0.804, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_body")
+position = Vector3(0, 0.7, 0)
+
+; monitoring=false — NPC는 감지당하기만 하면 된다. 서로가 서로를 감지하면
+; NPC 수의 제곱만큼 겹침 계산이 늘고, 얻는 것이 없다.
+[node name="InteractZone" type="Area3D" parent="."]
+monitoring = false
+
+[node name="Shape" type="CollisionShape3D" parent="InteractZone"]
+shape = SubResource("SphereShape3D_zone")
+position = Vector3(0, 0.7, 0)
+
+; 말을 걸 수 있다는 표시. 스프라이트 윗변(y 1.608)보다 조금 위에 띄운다.
+[node name="Marker" type="Sprite3D" parent="."]
+texture = ExtResource("2_marker")
+visible = false
+billboard = 2
+texture_filter = 0
+alpha_cut = 1
+cast_shadow = 0
+pixel_size = 0.067
+position = Vector3(0, 1.95, 0)

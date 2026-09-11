@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scripts/field/field_player.gd" id="1_player"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/char_player_sheet.png" id="2_sheet"]
@@ -6,6 +6,12 @@
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 radius = 0.3
 height = 1.4
+
+; 상호작용 탐지 반경 1.2m (설계 §2-1). 전방 판정은 넣지 않는다 —
+; Y축 빌보드 스프라이트는 바라보는 방향이 시각적으로 모호해서
+; 방향으로 실패시키면 플레이어가 원인을 이해하지 못한다.
+[sub_resource type="SphereShape3D" id="SphereShape3D_interact"]
+radius = 1.2
 
 [node name="FieldPlayer" type="CharacterBody3D"]
 script = ExtResource("1_player")
@@ -23,4 +29,13 @@ position = Vector3(0, 0.804, 0)
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("CapsuleShape3D_body")
+position = Vector3(0, 0.7, 0)
+
+; NPC의 InteractZone(Area3D)과의 겹침만 본다. monitorable=false —
+; 이쪽이 남에게 감지될 일은 없다.
+[node name="InteractArea" type="Area3D" parent="."]
+monitorable = false
+
+[node name="Shape" type="CollisionShape3D" parent="InteractArea"]
+shape = SubResource("SphereShape3D_interact")
 position = Vector3(0, 0.7, 0)

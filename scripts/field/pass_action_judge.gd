@@ -29,7 +29,9 @@ static func available_actions(npc: NpcData, night_now: bool, state: Node) -> Arr
 
 ## 이미 실패해 영구 차단됐거나(failure_flag), 1회성인데 이미 성공했는가.
 static func is_locked(npc: NpcData, entry: NpcPassAction, state: Node) -> bool:
-	if entry == null or entry.action == null:
+	# npc가 null이면 아래에서 npc.npc_id를 읽다 터진다. "판정할 수 없으면 잠김"으로 닫는다 —
+	# 열어 두면 데이터가 빠진 NPC에게 액션이 뜨고, 고르는 순간 결과 처리에서 죽는다.
+	if npc == null or entry == null or entry.action == null:
 		return true
 	var action := entry.action
 
@@ -75,7 +77,9 @@ static func evaluate(npc: NpcData, entry: NpcPassAction, state: Node) -> bool:
 ## M1의 네 액션은 골드가 전부 0이라 실제로는 플래그만 켜지지만, 순서 규칙은 지금 못 박아 둔다.
 static func resolve(npc: NpcData, entry: NpcPassAction, state: Node) -> bool:
 	var success := evaluate(npc, entry, state)
-	if entry == null or entry.action == null:
+	# npc 검사를 함께 한다. evaluate는 npc가 null이면 false를 주므로 아래 실패 분기로 흘러가는데,
+	# 거기서 npc.npc_id를 읽어 죽는다(원래 코드의 구멍).
+	if npc == null or entry == null or entry.action == null:
 		return success
 	var action := entry.action
 

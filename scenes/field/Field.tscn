@@ -1,4 +1,4 @@
-[gd_scene load_steps=38 format=3]
+[gd_scene load_steps=41 format=3]
 
 [ext_resource type="Script" path="res://scripts/field/field.gd" id="1_field"]
 [ext_resource type="Script" path="res://scripts/field/scatter_props.gd" id="2_scatter"]
@@ -18,11 +18,14 @@
 [ext_resource type="Texture2D" path="res://assets/placeholder/lantern.png" id="16_lantern"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/crate.png" id="17_crate"]
 [ext_resource type="Texture2D" path="res://assets/placeholder/signpost.png" id="18_sign"]
-[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_a.png" id="20_npc_a"]
-[ext_resource type="Texture2D" path="res://assets/placeholder/char_npc_b.png" id="21_npc_b"]
 [ext_resource type="Shader" path="res://shaders/vignette.gdshader" id="22_vignette"]
 [ext_resource type="Script" path="res://scripts/field/field_camera.gd" id="23_camera"]
 [ext_resource type="PackedScene" path="res://scenes/field/FieldPlayer.tscn" id="24_fieldplayer"]
+[ext_resource type="PackedScene" path="res://scenes/field/FieldNpc.tscn" id="25_fieldnpc"]
+[ext_resource type="Resource" path="res://data/npc/npc_rine.tres" id="26_rine"]
+[ext_resource type="Resource" path="res://data/npc/npc_borden.tres" id="27_borden"]
+[ext_resource type="Resource" path="res://data/npc/npc_yuri.tres" id="28_yuri"]
+[ext_resource type="Script" path="res://scripts/field/interaction_controller.gd" id="29_interaction"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_vignette"]
 shader = ExtResource("22_vignette")
@@ -880,24 +883,29 @@ scatter_seed = 991133
 [node name="Player" parent="Actors" instance=ExtResource("24_fieldplayer")]
 position = Vector3(0, 0, 0.6)
 camera_path = NodePath("../../FieldCamera")
+controller_path = NodePath("../../InteractionController")
 
-[node name="NpcA" type="Sprite3D" parent="Actors"]
-texture = ExtResource("20_npc_a")
-billboard = 2
-texture_filter = 0
-alpha_cut = 1
-shaded = true
-pixel_size = 0.067
-position = Vector3(-2.6, 0.8, -0.6)
+; NPC는 이름·텍스처·대사·패스 액션을 전부 npc_data(.tres)에서 받는다.
+; 노드가 갖는 것은 위치뿐이라, NPC를 늘리는 일이 .tres 추가 + 인스턴스 배치로 끝난다.
+; y는 0이다 — 스프라이트 높이 0.804는 FieldNpc.tscn 안에 있다(예전 Sprite3D 배치와 같은 눈높이).
+[node name="NpcRine" parent="Actors" instance=ExtResource("25_fieldnpc")]
+position = Vector3(-2.6, 0, -0.6)
+npc_data = ExtResource("26_rine")
 
-[node name="NpcB" type="Sprite3D" parent="Actors"]
-texture = ExtResource("21_npc_b")
-billboard = 2
-texture_filter = 0
-alpha_cut = 1
-shaded = true
-pixel_size = 0.067
-position = Vector3(3, 0.8, 0.2)
+[node name="NpcBorden" parent="Actors" instance=ExtResource("25_fieldnpc")]
+position = Vector3(3, 0, 0.2)
+npc_data = ExtResource("27_borden")
+
+; 플레이어 오른쪽 뒤(설계 §6). 앞의 두 명과 상호작용 반경 1.2m가 서로 물리지 않는 간격이다.
+[node name="NpcYuri" parent="Actors" instance=ExtResource("25_fieldnpc")]
+position = Vector3(1.4, 0, -1.8)
+npc_data = ExtResource("28_yuri")
+
+; 필드 상태 머신(설계 §4-1). 대화창·패스 액션 목록은 이 노드가 자식으로 만들어 붙인다.
+; Actors보다 뒤에 선언해야 player_path가 가리키는 노드가 이미 존재한다.
+[node name="InteractionController" type="Node" parent="."]
+script = ExtResource("29_interaction")
+player_path = NodePath("../Actors/Player")
 
 [node name="PostFX" type="CanvasLayer" parent="."]
 layer = 10

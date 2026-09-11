@@ -42,14 +42,16 @@ const SIDE_VIEW_THRESHOLD: float = 0.05
 ## 이동 방향의 기준이 되는 카메라. 비워 두면 뷰포트의 활성 카메라를 쓴다.
 @export var camera_path: NodePath
 
-## 이동 잠금.
+## 이동 잠금을 물어볼 상태 머신(설계 §4-1). 비워 두면 잠기지 않는다 —
+## 컨트롤러가 없는 씬(TownSquare 등)에서도 플레이어만 떼어 쓸 수 있어야 한다.
 ##
-## Stage 3에서 설계 문서 §4-1에 따라 `InteractionController.is_movement_locked()` 질의로
-## 교체된다. 지금 상태 머신을 미리 만들면 상태가 FREE 하나뿐이라 죽은 코드가 되므로
-## bool 하나로 둔다. 교체 시 이 프로퍼티를 읽는 곳은 `_physics_process` 한 군데뿐이다.
-var movement_locked: bool = false
+## **플레이어는 잠금 사유를 알지 않는다.** 대화·메뉴·컷신 등 사유가 늘어날 때
+## 여기를 고치지 않기 위해서다. 해제를 한 곳이라도 빠뜨리면 영원히 못 움직이는 버그가 된다.
+@export var controller_path: NodePath
 
 @onready var sprite: Sprite3D = $Sprite3D
+
+@onready var _controller: InteractionController = get_node_or_null(controller_path) as InteractionController
 
 ## 프로젝트 기본 중력. 지금 필드는 평지지만, 계단·단차가 생기면 그대로 동작해야 한다.
 var _gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
@@ -68,7 +70,9 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var direction := Vector3.ZERO
-	if not movement_locked:
+	# 매 프레임 상태 머신에 물어본다. 잠금 상태를 여기 복사해 두면
+	# 해제 시그널을 한 번 놓쳤을 때 영영 못 움직인다.
+	if not _is_movement_locked():
 		direction = _input_direction()
 
 	velocity.x = direction.x * move_speed
@@ -80,6 +84,12 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	_update_animation(direction, delta)
+
+
+func _is_movement_locked() -> bool:
+	if _controller == null:
+		return false
+	return _controller.is_movement_locked()
 
 
 ## 카메라 Y 회전을 반영한 월드 이동 방향(길이 0~1)을 낸다.

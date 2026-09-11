@@ -18,7 +18,8 @@ extends Resource
 ## 패스 액션 난이도. 1=만만함, 5=난공불락. JudgeKind.DIFFICULTY가 이 값을 본다.
 @export_range(1, 5) var difficulty: int = 1
 
-## 표시용 레벨. M1에서는 판정에 쓰지 않고 대화창 정보 표시에만 쓴다(M4 전투에서 사용 예정).
+## 실력 레벨. `JudgeKind.LEVEL`(도전)이 이 값을 보고, `scrutinize`의 `{level}` 토큰으로도 노출된다.
+## 난이도(경계심)와 다른 축이다 — "말은 안 통하지만 도전은 받아 주는" 조합을 만들 수 있다.
 @export_range(1, 99) var level: int = 1
 
 ## 낮 대사. 배열 한 칸이 대화창 한 페이지다.

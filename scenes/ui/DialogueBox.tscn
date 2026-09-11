@@ -1,0 +1,166 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/dialogue_box.gd" id="1_dialogue"]
+
+; 한글 폰트. 폰트를 지정하지 않으면 기본 폰트에 한글 글리프가 없어 전부 □로 나온다.
+; SystemFont는 OS 폰트를 이름으로 찾으므로 저장소에 폰트 파일을 넣지 않아도 된다.
+;
+; 안티에일리어싱을 끈 이유(실측 비교: _screenshots/ui_font_aa_on.png ↔ ui_font_aa_off.png — 3배 확대):
+; 이 프로젝트는 640×360으로 렌더해 1280×720 창에 2배 확대한다. 그래서 글자 가장자리에 생긴
+; 회색 반투명 픽셀 하나가 화면에서는 2×2 회색 덩어리가 되어 도트가 뭉개져 보인다.
+;   antialiasing = 0        (NONE)     — 가장자리를 픽셀 경계에 딱 끊는다
+;   subpixel_positioning = 0 (DISABLED) — 글자 원점을 정수 픽셀에 맞춘다. 켜두면 같은 글자가
+;                                         위치에 따라 다르게 렌더돼 한 줄 안에서 굵기가 들쭉날쭉하다
+;   hinting = 2             (NORMAL)   — 획을 픽셀 그리드에 스냅. 13px 한글은 이게 없으면
+;                                         가로획이 반 픽셀에 걸려 사라진다
+; 대가: 한글 받침처럼 획이 촘촘한 부분은 계단이 보인다. 13px 아래로 내리면 판독이 어려워지므로
+; 본문은 13px을 하한으로 둔다.
+[sub_resource type="SystemFont" id="SystemFont_kr"]
+font_names = PackedStringArray("Apple SD Gothic Neo")
+antialiasing = 0
+subpixel_positioning = 0
+hinting = 2
+
+; 이름표 전용 굵은 변형. 이름은 12px로 본문보다 작아서 굵기로 존재감을 준다 —
+; 크기를 키워 강조하면 이름표가 대사보다 커져 시선이 먼저 그쪽으로 간다.
+[sub_resource type="SystemFont" id="SystemFont_kr_bold"]
+font_names = PackedStringArray("Apple SD Gothic Neo")
+antialiasing = 0
+subpixel_positioning = 0
+hinting = 2
+font_weight = 700
+
+; 대화창 본체. 원작 인상: 화면 하단 가로 전폭 + 반투명 어두운 남색 + 아주 얇은 금색 테두리.
+; - bg 알파 0.84: 0.9는 사실상 불투명한 검은 판이라 무대를 완전히 덮는다. 0.75 아래로 내리면
+;   밝은 잔디 위에서 흰 글자의 대비가 떨어져 읽기 어려워진다. 그 사이의 값이다.
+; - border_width 1: 640 좌표계의 1px은 화면에서 2px이다. 2로 두면 4px 굵은 테두리가 되어
+;   장식이 아니라 프레임 자체가 눈에 띈다.
+; - corner_radius 0: 3px 라운드는 저해상도에서 계단 + 회색 AA 픽셀로 뭉개져 도트풍을 깬다.
+; - shadow: 밝은 낮 배경 위에서 패널 경계가 묻히는 것을 막는다. 불투명도를 올리는 대신
+;   그림자로 분리하면 무대를 덜 가리면서 같은 가독성을 얻는다.
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_box"]
+bg_color = Color(0.055, 0.06, 0.1, 0.84)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.84, 0.77, 0.56, 0.95)
+corner_detail = 1
+anti_aliasing = false
+shadow_color = Color(0, 0, 0, 0.35)
+shadow_size = 4
+shadow_offset = Vector2(0, 2)
+
+; 금색 테두리 바로 안쪽의 어두운 1px 선. 두 겹이 되면 테두리가 "그려진 선"이 아니라
+; 깎인 프레임처럼 보인다 — 원작 창틀의 인상이 여기서 나온다.
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_inset"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.02, 0.02, 0.04, 0.55)
+corner_detail = 1
+anti_aliasing = false
+
+; 이름표. 원작은 이름을 대사 본문 위 **별도 판**에 얹는다. 본문과 같은 판 안에 두면
+; 이름과 대사가 한 덩어리로 읽혀 누가 말하는지가 즉시 눈에 들어오지 않는다.
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_name"]
+content_margin_left = 8.0
+content_margin_top = 1.0
+content_margin_right = 8.0
+content_margin_bottom = 1.0
+bg_color = Color(0.075, 0.075, 0.125, 0.92)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.84, 0.77, 0.56, 0.95)
+corner_detail = 1
+anti_aliasing = false
+
+; PostFX 비네팅이 layer=10이다. 그 아래에 두면 대화창 모서리가 어두워진다.
+[node name="DialogueBox" type="CanvasLayer"]
+layer = 20
+script = ExtResource("1_dialogue")
+
+; UI 좌표계는 프로젝트 뷰포트인 640×360이다(1280×720 창에 2배로 확대된다).
+; 1280 기준으로 좌표를 잡으면 화면 밖으로 나간다.
+[node name="Root" type="Control" parent="."]
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+; y 266~348(높이 82). 이전 100에서 18 줄였다 — 대사가 1~2줄인데 3줄분 여백이 남아
+; 아래쪽 절반이 빈 검은 판으로 보였다. 줄이면서도 3줄까지는 들어간다.
+; 좌우 여백 14: 원작처럼 가로 전폭에 가깝게 두되 화면 끝에 붙지는 않게 한다.
+[node name="Panel" type="Panel" parent="Root"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 14.0
+offset_top = 266.0
+offset_right = -14.0
+offset_bottom = -12.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_box")
+
+[node name="Inset" type="Panel" parent="Root/Panel"]
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 1.0
+offset_top = 1.0
+offset_right = -1.0
+offset_bottom = -1.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_inset")
+
+; PanelContainer는 자식 라벨의 최소 크기만큼만 커진다 — 이름 길이에 맞춰 판이 줄었다 늘었다 한다.
+; 고정 폭으로 두면 짧은 이름 뒤에 빈 판이 남는다.
+; offset_top -20 / bottom 0: 본체 윗변 바로 위에 얹혀 아랫변을 공유한다.
+[node name="NamePlate" type="PanelContainer" parent="Root/Panel"]
+offset_left = 10.0
+offset_top = -20.0
+offset_right = 10.0
+offset_bottom = 0.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_name")
+
+[node name="NameLabel" type="Label" parent="Root/Panel/NamePlate"]
+mouse_filter = 2
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.98, 0.87, 0.55, 1)
+theme_override_fonts/font = SubResource("SystemFont_kr_bold")
+theme_override_font_sizes/font_size = 12
+
+; autowrap_mode 3 = WORD_SMART. 한국어는 어절이 길어 2(ARBITRARY)로 두면 단어 중간에서 끊긴다.
+; line_spacing 2: 13px 한글은 받침 때문에 글자 상자가 꽉 차서 기본 간격이면 줄이 붙어 보인다.
+[node name="TextLabel" type="Label" parent="Root/Panel"]
+anchor_right = 1.0
+offset_left = 14.0
+offset_top = 13.0
+offset_right = -14.0
+offset_bottom = 70.0
+mouse_filter = 2
+autowrap_mode = 3
+theme_override_colors/font_color = Color(0.93, 0.92, 0.87, 1)
+theme_override_constants/line_spacing = 2
+theme_override_fonts/font = SubResource("SystemFont_kr")
+theme_override_font_sizes/font_size = 13
+
+; 진행 표시. 오른쪽 아래 구석에 두고 깜빡인다(깜빡임은 dialogue_box.gd).
+[node name="Prompt" type="Label" parent="Root/Panel"]
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -22.0
+offset_top = -19.0
+offset_right = -8.0
+offset_bottom = -4.0
+mouse_filter = 2
+text = "▼"
+horizontal_alignment = 1
+vertical_alignment = 1
+theme_override_colors/font_color = Color(0.9, 0.81, 0.52, 1)
+theme_override_fonts/font = SubResource("SystemFont_kr")
+theme_override_font_sizes/font_size = 11
